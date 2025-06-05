@@ -1,22 +1,20 @@
-import './globals.css'
-import { ReactNode } from 'react'
+// app/layout.tsx
+import './globals.css';
+import { Providers } from '@/components/Providers';
 
 export const metadata = {
-  title: 'Hospital Management System',
-  description: 'Client-side Web Project',
-}
+  title: 'Hospital Management',
+  description: 'Hospital Management System',
+};
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-white text-gray-900">
-        <Header />
-        <main className="container mx-auto px-4 py-6">{children}</main>
-        <Footer />
+      <body>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
-  )
+  );
 }
-
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'

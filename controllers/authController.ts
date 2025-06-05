@@ -2,7 +2,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Patient, Doctor, Admin } from "../models/PatientModel";
+import { Patient } from "../models/PatientModel";
+import { Doctor } from "../models/DoctorModel";
+import { Admin } from "../models/AdminModel";
+
 
 const generateToken = (id: string, role: string) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET!, {
@@ -17,7 +20,7 @@ export const registerPatient = async (
   try {
     const { name, email, password, dateOfBirth, bloodType, allergies } = req.body;
 
-    // Check if email exists in any collection
+  
     const [existingPatient, existingDoctor, existingAdmin] = await Promise.all([
       Patient.findOne({ email }),
       Doctor.findOne({ email }),
