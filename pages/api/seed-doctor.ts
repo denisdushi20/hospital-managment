@@ -11,14 +11,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await dbConnect();
 
-    const hashedPassword = await bcrypt.hash('password123', 10); // Default password
+    const hashedPassword = await bcrypt.hash('password123', 10); 
 
     const doctor = await Doctor.create({
       name: 'John',
       surname: 'Doe',
       specialization: 'Cardiology',
-      email: 'admin@gmail.com',
+      email: 'doctor@gmail.com',
       password: hashedPassword,
+       role: 'doctor',
     });
 
     res.status(201).json({ success: true, data: doctor });

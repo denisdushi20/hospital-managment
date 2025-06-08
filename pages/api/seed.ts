@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const hashedPassword = await bcrypt.hash('patient123', 10);
 
-    // Regular (email + password) patient
+    
     const localPatient = await Patient.create({
       name: 'Jane',
       surname: 'Smith',
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       role: 'patient',
     });
 
-    // Google OAuth patient (no password, may not have full name)
+  
     const googlePatient = await Patient.create({
       name: 'Google',
       surname: 'User',

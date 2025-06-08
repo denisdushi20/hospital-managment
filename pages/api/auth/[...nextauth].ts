@@ -39,56 +39,82 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
+
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
+
   pages: {
     signIn: '/login',
   },
- callbacks: {
-async signIn({ user, account, profile }) {
-    await dbConnect(); // Make sure this is he
- 
-  if (account?.provider === 'google') {
-    const existingUser = await Patient.findOne({ email: user.email });
-    if (!existingUser) {
-      const fullName = user.name || '';
-      const [firstName, ...rest] = fullName.split(' ');
-      const surname = rest.join(' ');
 
-      await Patient.create({
-        email: user.email,
-        name: firstName,
-        surname: surname,
-        role: 'patient',
-      });
+  callbacks: {
+    async signIn({ user, account }) {
+      await dbConnect();
+
+      if (account?.provider === 'google') {
+        const existingUser = await Patient.findOne({ email: user.email });
+
+        if (!existingUser) {
+          const fullName = user.name || '';
+          const [firstName, ...rest] = fullName.split(' ');
+          const surname = rest.join(' ');
+
+          await Patient.create({
+            email: user.email,
+            name: firstName,
+            surname: surname,
+            role: 'patient',
+          });
+        }
+      }
+
+      return true;
+    },
+
+  async jwt({ token, user, account }) {
+  if (user) {
+    token.id = user.id ?? token.sub;
+    token.email = user.email;
+  }
+
+  if (account?.provider === 'google') {
+    await dbConnect();
+
+    const dbUser =
+      (await Admin.findOne({ email: token.email })) ||
+      (await Doctor.findOne({ email: token.email })) ||
+      (await Patient.findOne({ email: token.email }));
+
+    if (dbUser) {
+      token.role = dbUser.role;
+      token.id = dbUser._id.toString();
+    } else {
+      token.role = 'patient'; 
     }
   }
-  return true;
+
+  return token;
 }
 ,
-    async jwt({ token, user, account }) {
-      if (user) {
-        token.id = user.id ?? token.sub;
-        token.role = user.role ?? 'oauth';
-      }
-      return token;
-    },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.email = token.email;
       }
       return session;
     },
   },
+
   session: {
     strategy: 'jwt',
   },
+
   secret: process.env.NEXTAUTH_SECRET,
 };
-
 
 export default NextAuth(authOptions);
