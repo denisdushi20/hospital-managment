@@ -2,9 +2,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Patient } from "../models/PatientModel";
-import { Doctor } from "../models/DoctorModel";
-import { Admin } from "../models/AdminModel";
+import  Patient from "../models/Patient";
+import  Doctor  from "../models/Doctor";
+import  Admin  from "../models/Admin";
 
 
 const generateToken = (id: string, role: string) => {
