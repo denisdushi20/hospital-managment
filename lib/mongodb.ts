@@ -24,3 +24,5 @@ async function dbConnect() {
 }
 
 export default dbConnect;
+
+// Previous database connection uri: mongodb+srv://denisdushi19:Nenii2003@cluster0.8tk9bfs.mongodb.net/hospitaldb
