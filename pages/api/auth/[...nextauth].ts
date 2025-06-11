@@ -1,34 +1,11 @@
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import NextAuth, { NextAuthOptions, DefaultSession, DefaultUser } from 'next-auth';
+import NextAuth, { NextAuthOptions, DefaultSession, DefaultUser } from 'next-auth'; // Keep DefaultSession, DefaultUser for base types
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import Doctor from '@/models/Doctor';
 import Patient from '@/models/Patient';
 import Admin from '@/models/Admin';
-
-
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string; 
-      role: string; 
-    } & DefaultSession['user']; 
-  }
-
-  interface User extends DefaultUser {
-    id: string; 
-    role: string; 
-  }
-}
-
-
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id: string; 
-    role: string; 
-  }
-}
 
 
 export const authOptions: NextAuthOptions = {
@@ -47,24 +24,42 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user =
-          (await Admin.findOne({ email: credentials.email }).select('+password')) ||
-          (await Doctor.findOne({ email: credentials.email }).select('+password')) ||
-          (await Patient.findOne({ email: credentials.email }).select('+password'));
+          (await Admin.findOne({ email: credentials.email }).select('+password').lean()) ||
+          (await Doctor.findOne({ email: credentials.email }).select('+password').lean()) ||
+          (await Patient.findOne({ email: credentials.email }).select('+password').lean());
 
         if (!user) {
           throw new Error('No user found');
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        // Cast 'user' to a type that has 'password' for bcrypt comparison
+        const userWithPassword = user as { password?: string } & typeof user;
+
+        if (!userWithPassword.password) {
+            throw new Error('User account not set up for password login (e.g., OAuth only)');
+        }
+
+        const isValid = await bcrypt.compare(credentials.password, userWithPassword.password);
         if (!isValid) {
           throw new Error('Invalid password');
         }
 
+        // Return a plain object with the user's data for NextAuth.js
+        // Include all fields you want to carry into the JWT/Session
+        // Ensure to stringify ObjectId if you pass it as 'id'
+        if (Array.isArray(user)) {
+          throw new Error('User query returned an array, expected a single user object.');
+        }
         return {
-          id: user._id.toString(),
-          email: user.email,
-          role: user.role || 'unknown', 
-          name: user.name, 
+          id: (user as any)._id?.toString(),
+          email: (user as any).email,
+          role: (user as any).role || 'unknown',
+          name: (user as any).name, 
+          surname: (user as typeof Patient.prototype)?.surname,
+          phone: (user as typeof Patient.prototype)?.phone,
+          address: (user as typeof Patient.prototype)?.address,
+          dateOfBirth: (user as typeof Patient.prototype)?.dateOfBirth?.toISOString(),
+          gender: (user as typeof Patient.prototype)?.gender,
         };
       },
     }),
@@ -76,11 +71,10 @@ export const authOptions: NextAuthOptions = {
   ],
 
   pages: {
-    signIn: '/login', 
+    signIn: '/login',
   },
 
   callbacks: {
-    
     async signIn({ user, account }) {
       await dbConnect();
 
@@ -101,55 +95,73 @@ export const authOptions: NextAuthOptions = {
             name: firstName,
             surname: surname,
             role: 'patient', // Default role for new Google users
+            // For new Google users, other fields like phone, address, DOB, gender
           });
         }
       }
-      return true; 
+      return true;
     },
 
     // This callback is called whenever a JWT token is created or updated
     async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id; 
-        token.email = user.email; 
-        token.role = (user as any).role; 
-                                        
+
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.role = (user as any).role;
+
+        token.surname = (user as any).surname;
+        token.phone = (user as any).phone;
+        token.address = (user as any).address;
+        token.dateOfBirth = (user as any).dateOfBirth;
+        token.gender = (user as any).gender;
+
+      } else if (token.email) {
+          await dbConnect();
+          const dbUser =
+            (await Admin.findOne({ email: token.email }).lean()) ||
+            (await Doctor.findOne({ email: token.email }).lean()) ||
+            (await Patient.findOne({ email: token.email }).lean());
+
+          if (dbUser && !Array.isArray(dbUser)) {
+            token.id = dbUser._id?.toString() ?? '';
+            token.email = dbUser.email;
+            token.name = dbUser.name;
+            token.role = dbUser.role;
+            token.surname = (dbUser as typeof Patient.prototype)?.surname;
+            token.phone = (dbUser as typeof Patient.prototype)?.phone;
+            token.address = (dbUser as typeof Patient.prototype)?.address;
+            token.dateOfBirth = (dbUser as typeof Patient.prototype)?.dateOfBirth?.toISOString();
+            token.gender = (dbUser as typeof Patient.prototype)?.gender;
+          }
       }
 
-      if (account?.provider === 'google' || !token.role) { 
-        await dbConnect();
-        const dbUser =
-          (await Admin.findOne({ email: token.email })) ||
-          (await Doctor.findOne({ email: token.email })) ||
-          (await Patient.findOne({ email: token.email }));
-
-        if (dbUser) {
-          token.role = dbUser.role; 
-          token.id = dbUser._id.toString(); 
-        } else if (account?.provider === 'google' && !dbUser) {
-          // If it was a Google login and user was not found in DB (implying a new patient was created)
-          token.role = 'patient';
-        }
-      }
-
-      return token; 
+      return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id; 
-        session.user.role = token.role; 
-        session.user.email = token.email; 
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.role = token.role as string;
+
+        session.user.surname = token.surname;
+        session.user.phone = token.phone;
+        session.user.address = token.address;
+        session.user.dateOfBirth = token.dateOfBirth;
+        session.user.gender = token.gender;
       }
-      return session; 
+      return session;
     },
   },
 
   session: {
-    strategy: 'jwt', 
+    strategy: 'jwt',
   },
 
-  secret: process.env.NEXTAUTH_SECRET, 
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 export default NextAuth(authOptions);
