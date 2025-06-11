@@ -41,21 +41,17 @@ export default function PatientProfilePage() {
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
       setName(session.user.name || "");
-      // IMPORTANT: Ensure your NextAuth session callback is populating these fields
-      // If not, they will be empty initially, but can be filled and then updated.
       setSurname(session.user.surname || "");
       setEmail(session.user.email || "");
       setPhone(session.user.phone || "");
 
-      // Address sub-fields
       setStreet(session.user.address?.street || "");
       setCity(session.user.address?.city || "");
       setState(session.user.address?.state || "");
       setZipCode(session.user.address?.zipCode || "");
       setCountry(session.user.address?.country || "");
 
-      // Date of Birth (format for input type="date")
-      setDateOfBirth(formatDateForInput(session.user.dateOfBirth));
+      setDateOfBirth(formatDateForInput(session.user.dateOfBirth ?? undefined));
       setGender(session.user.gender || "");
     }
   }, [session, status]);
@@ -122,8 +118,7 @@ export default function PatientProfilePage() {
 
       if (response.ok) {
         // If the update was successful, update the client-side session
-        // Pass the entire updated user object from the API response
-        await update(data.user); // `data.user` should contain the latest profile
+        await update(data.user);
         setMessage({ type: "success", text: "Profile updated successfully!" });
       } else {
         setMessage({
@@ -251,7 +246,7 @@ export default function PatientProfilePage() {
               Phone
             </label>
             <input
-              type="tel" // Use type="tel" for phone numbers
+              type="tel"
               id="phone"
               name="phone"
               value={phone}
@@ -389,7 +384,6 @@ export default function PatientProfilePage() {
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
-              {/* Add more options like "Other", "Prefer not to say" if your schema supports them */}
             </select>
           </div>
 

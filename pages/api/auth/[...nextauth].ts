@@ -44,9 +44,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid password');
         }
 
-        // Return a plain object with the user's data for NextAuth.js
-        // Include all fields you want to carry into the JWT/Session
-        // Ensure to stringify ObjectId if you pass it as 'id'
         if (Array.isArray(user)) {
           throw new Error('User query returned an array, expected a single user object.');
         }
