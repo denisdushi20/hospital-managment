@@ -3,27 +3,60 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation"; // For programmatic navigation (e.g., to a password change page)
-import { signOut } from "next-auth/react"; // For logout if you want a logout button here
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function PatientProfilePage() {
-  const { data: session, status, update } = useSession(); // `update` from useSession is key for updating client session
+  const { data: session, status, update } = useSession();
   const router = useRouter();
 
   // State to manage form inputs
   const [name, setName] = useState("");
+  const [surname, setSurname] = useState(""); // New state
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState(""); // New state
+  const [street, setStreet] = useState(""); // New state for address
+  const [city, setCity] = useState(""); // New state for address
+  const [state, setState] = useState(""); // New state for address
+  const [zipCode, setZipCode] = useState(""); // New state for address
+  const [country, setCountry] = useState(""); // New state for address
+  const [dateOfBirth, setDateOfBirth] = useState(""); // New state (string for input type="date")
+  const [gender, setGender] = useState(""); // New state
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
+  // Helper to format Date for input type="date"
+  const formatDateForInput = (dateString: string | Date | undefined) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return ""; // Invalid date
+    return date.toISOString().split("T")[0];
+  };
+
   // Populate form fields with session data when it's available
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
       setName(session.user.name || "");
+      // IMPORTANT: Ensure your NextAuth session callback is populating these fields
+      // If not, they will be empty initially, but can be filled and then updated.
+      setSurname(session.user.surname || "");
       setEmail(session.user.email || "");
+      setPhone(session.user.phone || "");
+
+      // Address sub-fields
+      setStreet(session.user.address?.street || "");
+      setCity(session.user.address?.city || "");
+      setState(session.user.address?.state || "");
+      setZipCode(session.user.address?.zipCode || "");
+      setCountry(session.user.address?.country || "");
+
+      // Date of Birth (format for input type="date")
+      setDateOfBirth(formatDateForInput(session.user.dateOfBirth));
+      setGender(session.user.gender || "");
     }
   }, [session, status]);
 
@@ -33,8 +66,17 @@ export default function PatientProfilePage() {
     setMessage(null); // Clear previous messages
     setIsSubmitting(true);
 
-    if (!email || !name) {
-      setMessage({ type: "error", text: "Name and Email are required." });
+    // Basic required field validation (adjust based on your schema's required fields)
+    if (!name || !email || !surname || !phone || !dateOfBirth || !gender) {
+      setMessage({
+        type: "error",
+        text: "Please fill in all required fields (Name, Surname, Email, Phone, Date of Birth, Gender).",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!street || !city || !state || !zipCode || !country) {
+      setMessage({ type: "error", text: "Please fill in all address fields." });
       setIsSubmitting(false);
       return;
     }
@@ -50,27 +92,43 @@ export default function PatientProfilePage() {
       return;
     }
 
+    // Assemble the payload with all fields
+    const payload = {
+      name,
+      surname,
+      email,
+      phone,
+      address: {
+        street,
+        city,
+        state,
+        zipCode,
+        country,
+      },
+      dateOfBirth, // Send as string, API will convert to Date
+      gender,
+    };
+
     try {
-      // **IMPORTANT:** Replace this with your actual API endpoint for updating user profile
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         // If the update was successful, update the client-side session
-        // This is crucial to reflect changes without a full page refresh
-        await update({ name, email }); // `update` from useSession can take an object to merge
+        // Pass the entire updated user object from the API response
+        await update(data.user); // `data.user` should contain the latest profile
         setMessage({ type: "success", text: "Profile updated successfully!" });
       } else {
         setMessage({
           type: "error",
-          text: data.message || "Failed to update profile.",
+          text: data.message || data.errors?.[0] || "Failed to update profile.",
         });
       }
     } catch (error) {
@@ -81,12 +139,10 @@ export default function PatientProfilePage() {
     }
   };
 
-  // Handle "Change Password" button click
   const handleChangePassword = () => {
-    router.push("/patient/change-password"); // Navigate to a dedicated password change page
+    router.push("/patient/change-password");
   };
 
-  // Optional: Handle if user is not authenticated or session is loading
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -129,6 +185,7 @@ export default function PatientProfilePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name */}
           <div>
             <label
               htmlFor="name"
@@ -147,6 +204,26 @@ export default function PatientProfilePage() {
             />
           </div>
 
+          {/* Surname */}
+          <div>
+            <label
+              htmlFor="surname"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Surname
+            </label>
+            <input
+              type="text"
+              id="surname"
+              name="surname"
+              value={surname}
+              onChange={(e) => setSurname(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          {/* Email */}
           <div>
             <label
               htmlFor="email"
@@ -165,6 +242,158 @@ export default function PatientProfilePage() {
             />
           </div>
 
+          {/* Phone */}
+          <div>
+            <label
+              htmlFor="phone"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Phone
+            </label>
+            <input
+              type="tel" // Use type="tel" for phone numbers
+              id="phone"
+              name="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          {/* Address Fields */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-800">Address</h3>
+            <div>
+              <label
+                htmlFor="street"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Street
+              </label>
+              <input
+                type="text"
+                id="street"
+                name="street"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="city"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                City
+              </label>
+              <input
+                type="text"
+                id="city"
+                name="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="state"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                State
+              </label>
+              <input
+                type="text"
+                id="state"
+                name="state"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="zipCode"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Zip Code
+              </label>
+              <input
+                type="text"
+                id="zipCode"
+                name="zipCode"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="country"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Country
+              </label>
+              <input
+                type="text"
+                id="country"
+                name="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Date of Birth */}
+          <div>
+            <label
+              htmlFor="dateOfBirth"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Date of Birth
+            </label>
+            <input
+              type="date"
+              id="dateOfBirth"
+              name="dateOfBirth"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          {/* Gender */}
+          <div>
+            <label
+              htmlFor="gender"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Gender
+            </label>
+            <select
+              id="gender"
+              name="gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              {/* Add more options like "Other", "Prefer not to say" if your schema supports them */}
+            </select>
+          </div>
+
+          {/* Role (Read-Only) */}
           <div>
             <label
               htmlFor="role"
@@ -178,7 +407,7 @@ export default function PatientProfilePage() {
               name="role"
               value={session?.user?.role || "N/A"}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed sm:text-sm"
-              readOnly // Role cannot be changed by the user
+              readOnly
             />
           </div>
 
@@ -192,7 +421,7 @@ export default function PatientProfilePage() {
             </button>
 
             <button
-              type="button" // Use type="button" to prevent form submission
+              type="button"
               onClick={handleChangePassword}
               className="ml-4 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
