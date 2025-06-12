@@ -11,14 +11,18 @@
   "dependencies": {
     "@types/mongoose": "^5.11.96",
     "bcryptjs": "^3.0.2",
+    "chart.js": "^4.4.9",
     "hospital-managment": "file:",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.1",
     "next": "^15.3.2",
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.57.0",
+    "react-icons": "^5.5.0",
+    "react-toastify": "^11.0.5",
     "zod": "^3.25.63"
   },
   "devDependencies": {
@@ -26,7 +30,9 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
+    "@types/react-chartjs-2": "^2.0.2",
     "@types/react-dom": "^19",
+    "@types/react-toastify": "^4.0.2",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.4",
     "tailwindcss": "^4.1.8",
