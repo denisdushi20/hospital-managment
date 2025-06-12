@@ -1,13 +1,14 @@
+// app/register/page.tsx
 "use client";
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation"; // Assuming App Router for navigation after registration
-import Header from "@/components/Header"; // Ensure Header is correctly placed in your layout
-import Footer from "@/components/Footer"; // Ensure Footer is correctly placed in your layout
+import { useRouter } from "next/navigation"; 
+import Header from "@/components/Header"; 
+import Footer from "@/components/Footer"; 
 
 export default function RegisterPage() {
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter(); 
 
   // State to manage all form inputs, including new fields
   const [form, setForm] = useState({
@@ -16,7 +17,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     phone: "",
-    street: "", // Nested address fields as flat state for simplicity
+    street: "", 
     city: "",
     state: "",
     zipCode: "",
@@ -115,7 +116,7 @@ export default function RegisterPage() {
       }
 
       setIsSuccess(true);
-      setMessage("Registration successful! You can now log in.");
+      setMessage("Registration successful! You will be redirected to login.");
       setForm({
         // Clear form fields after successful registration
         name: "",
@@ -132,8 +133,11 @@ export default function RegisterPage() {
         gender: "",
       });
 
-      // Optionally, redirect to login page after successful registration
-      // setTimeout(() => router.push('/login'), 2000); // Redirect after 2 seconds
+      // Redirect to login page after a delay
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+      
     } catch (error: any) {
       console.error("Fetch error during registration:", error);
       setMessage(error.message || "Network error occurred. Please try again.");
@@ -144,10 +148,8 @@ export default function RegisterPage() {
   };
 
   return (
-    // Assuming Header and Footer are handled by a global layout.
-    // If not, keep them here, but the recommended approach is a layout.
     <>
-      <Header /> {/* If not in global layout */}
+      <Header />
       <main className="flex min-h-screen bg-gray-50 items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-xl w-full space-y-8 bg-white p-10 rounded-lg shadow-xl">
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -349,7 +351,7 @@ export default function RegisterPage() {
                     name="gender"
                     value={form.gender}
                     onChange={handleChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-900 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
@@ -417,7 +419,7 @@ export default function RegisterPage() {
           </div>
         </div>
       </main>
-      <Footer /> {/* If not in global layout */}
+      <Footer />
     </>
   );
 }
