@@ -15,7 +15,7 @@ interface Patient {
     zipCode?: string;
     country?: string;
   };
-  dateOfBirth?: string; // Or Date
+  dateOfBirth?: string;
   gender?: string;
   role: string;
 }
@@ -43,25 +43,6 @@ export default function PatientEditModal({
     setFormData(patient);
     setMessage(null); // Reset message when modal opens or patient changes
   }, [patient, isOpen]);
-
-  // This useEffect now ensures that the background page does NOT scroll,
-  // while the modal itself (the black overlay with the white box inside) will scroll.
-  useEffect(() => {
-    if (isOpen) {
-      // We already want the first div to handle scrolling, so we don't need
-      // to hide overflow on the body anymore.
-      // document.body.style.overflow = 'hidden'; // Removed as per new design
-    } else {
-      // document.body.style.overflow = ''; // Removed as per new design
-    }
-
-    // Cleanup function:
-    return () => {
-      // document.body.style.overflow = ''; // Removed as per new design
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -99,12 +80,9 @@ export default function PatientEditModal({
     }
 
     try {
-      // Simulate API call delay (uncomment if needed)
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       onUpdate(formData);
       setMessage({ type: "success", text: "Profile updated successfully!" });
-      // Consider closing the modal on successful update or letting the parent handle it
-      // onClose(); // Uncomment if you want the modal to close on success
     } catch (error) {
       console.error("Error in modal update handler:", error);
       setMessage({
@@ -117,15 +95,8 @@ export default function PatientEditModal({
   };
 
   return (
-    // Outer overlay: Now handles scrolling if content overflows viewport.
-    // Removed items-center and justify-center to allow content to start from top.
-    // Added max-h-screen to ensure it takes full height for scrolling.
     <div className="fixed inset-0 z-50 bg-white bg-opacity-40 p-4 overflow-y-auto max-h-screen">
-      {/* Modal content container: This is the actual white box.
-          It's a flex column to stack header, form, and footer.
-          Removed max-h and overflow-y-auto as the outer div will now scroll. */}
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-auto transform transition-all scale-100 opacity-100 flex flex-col">
-        {/* Modal Header: Remains at the top, does not scroll with content. */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-2xl font-semibold text-gray-800">
             Edit Patient Profile
@@ -168,7 +139,7 @@ export default function PatientEditModal({
         {/* Modal Form Content: Main area for inputs */}
         <form
           onSubmit={handleSubmit}
-          className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 flex-grow" // Retained gap-y-3, adjust as needed
+          className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 flex-grow"
         >
           {/* Patient Details */}
           <div>

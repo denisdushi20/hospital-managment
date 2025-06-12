@@ -345,12 +345,9 @@ export default function AdminDashboard() {
       <Header />
 
       <div className="flex flex-1">
-        {/* Removed AdminSidebar */}
-        {/* <AdminSidebar /> */}
 
         <main className="flex-1 p-6 md:p-8 space-y-6">
           {" "}
-          {/* The main content now takes full width */}
           <h1 className="text-3xl font-bold mb-6 text-gray-800">
             Admin Dashboard
           </h1>
