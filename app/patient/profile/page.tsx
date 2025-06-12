@@ -135,7 +135,7 @@ export default function PatientProfilePage() {
   };
 
   const handleChangePassword = () => {
-    router.push("/patient/change-password");
+    router.push("/patient/profile/change-password");
   };
 
   if (status === "loading") {
@@ -194,7 +194,7 @@ export default function PatientProfilePage() {
               name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             />
           </div>
@@ -213,7 +213,7 @@ export default function PatientProfilePage() {
               name="surname"
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             />
           </div>
@@ -232,7 +232,7 @@ export default function PatientProfilePage() {
               name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             />
           </div>
@@ -251,7 +251,7 @@ export default function PatientProfilePage() {
               name="phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             />
           </div>
@@ -272,7 +272,7 @@ export default function PatientProfilePage() {
                 name="street"
                 value={street}
                 onChange={(e) => setStreet(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 required
               />
             </div>
@@ -289,7 +289,7 @@ export default function PatientProfilePage() {
                 name="city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 required
               />
             </div>
@@ -306,7 +306,7 @@ export default function PatientProfilePage() {
                 name="state"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 required
               />
             </div>
@@ -323,7 +323,7 @@ export default function PatientProfilePage() {
                 name="zipCode"
                 value={zipCode}
                 onChange={(e) => setZipCode(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 required
               />
             </div>
@@ -340,7 +340,7 @@ export default function PatientProfilePage() {
                 name="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 required
               />
             </div>
@@ -360,7 +360,7 @@ export default function PatientProfilePage() {
               name="dateOfBirth"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             />
           </div>
@@ -378,12 +378,18 @@ export default function PatientProfilePage() {
               name="gender"
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             >
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
+              <option value="" className="text-black">
+                Select Gender
+              </option>
+              <option value="Male" className="text-black">
+                Male
+              </option>
+              <option value="Female" className="text-black">
+                Female
+              </option>
             </select>
           </div>
 
