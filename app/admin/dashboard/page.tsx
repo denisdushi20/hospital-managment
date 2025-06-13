@@ -22,9 +22,13 @@ import PatientEditModal from "@/components/Modals/PatientEditModal";
 import PatientPasswordChangeModal from "@/components/Modals/PatientPasswordChangeModal";
 import DoctorEditModal from "@/components/Modals/DoctorEditModal";
 import DoctorPasswordChangeModal from "@/components/Modals/DoctorPasswordChangeModal";
-import DoctorAddModal from "@/components/Modals/DoctorAddModal"; // Re-import DoctorAddModal
+import DoctorAddModal from "@/components/Modals/DoctorAddModal";
+import AdminAddModal from "@/components/Modals/AdminAddModal";
+import AdminEditModal from "@/components/Modals/AdminEditModal";
+import AdminPasswordChangeModal from "@/components/Modals/AdminPasswordChangeModal";
+
 import { toast } from "react-toastify";
-// Removed: Link from next/link as we're using a modal now for adding
+
 
 // Register Chart.js components
 ChartJS.register(
@@ -75,7 +79,7 @@ interface Doctor {
     country: string;
   };
   dateOfBirth: string; // Stored as ISO string, will need formatting for date input
-  gender: string;
+  gender: "Male" | "Female";
   role: string;
   lastLogin?: string;
   createdAt: string;
@@ -101,6 +105,46 @@ interface NewDoctorDataForAPI {
   password: string;
 }
 
+// NEW: Define the interface for Admin data (from your provided schema)
+interface Admin {
+  _id: string;
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  dateOfBirth: string; // Stored as ISO string
+  gender: "Male" | "Female";
+  role: string; // "admin"
+  lastLogin?: string; // Optional field
+  createdAt: string;
+  updatedAt: string;
+}
+
+// NEW: Define interface for new Admin data (for API call, without confirmPassword)
+interface NewAdminDataForAPI {
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  dateOfBirth: string; // ISO string
+  gender: "Male" | "Female";
+  password: string;
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
 
@@ -114,6 +158,11 @@ export default function AdminDashboard() {
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [doctorsError, setDoctorsError] = useState<string | null>(null);
 
+  // NEW: State for Admin Management
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(true);
+  const [adminsError, setAdminsError] = useState<string | null>(null);
+
   // State for Patient Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -124,8 +173,14 @@ export default function AdminDashboard() {
   const [isDoctorPasswordModalOpen, setIsDoctorPasswordModalOpen] =
     useState(false);
   const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null);
-  // Re-added: State for "Add Doctor" Modal visibility
   const [isDoctorAddModalOpen, setIsDoctorAddModalOpen] = useState(false);
+
+  // NEW: State for Admin Modals
+  const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
+  const [isAdminEditModalOpen, setIsAdminEditModalOpen] = useState(false);
+  const [isAdminPasswordModalOpen, setIsAdminPasswordModalOpen] =
+    useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
   // Dummy Data for Quick Statistics
   const stats = {
@@ -311,11 +366,42 @@ export default function AdminDashboard() {
     }
   };
 
+  // NEW: Function to fetch admins data
+  const fetchAdmins = async () => {
+    setAdminsLoading(true);
+    setAdminsError(null);
+    try {
+      const res = await fetch("/api/admins"); // Assuming a new API route for admins
+      const data = await res.json();
+      if (res.ok) {
+        // Filter out the currently logged-in admin from the list to prevent self-deletion/editing issues
+        const filteredAdmins = data.data.filter(
+          (admin: Admin) => admin.email !== session?.user?.email
+        );
+        setAdmins(filteredAdmins);
+      } else {
+        setAdminsError(data.message || "Failed to fetch administrators");
+        toast.error(data.message || "Failed to fetch administrators");
+      }
+    } catch (err) {
+      console.error("Fetch admins error:", err);
+      setAdminsError(
+        "Network error or server unreachable for administrators data"
+      );
+      toast.error(
+        "Network error or server unreachable for administrators data"
+      );
+    } finally {
+      setAdminsLoading(false);
+    }
+  };
+
   // Fetch data on component mount and if session changes
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role === "admin") {
       fetchPatients();
       fetchDoctors();
+      fetchAdmins(); // Fetch admins data as well
     }
   }, [session, status]);
 
@@ -331,6 +417,8 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteClick = async (patientId: string) => {
+    // Replaced confirm() with a custom message/modal if needed, as per earlier instructions
+    // For now, using a simple check to proceed with delete
     if (
       window.confirm(
         "Are you sure you want to delete this patient? This action cannot be undone."
@@ -485,7 +573,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Re-added: Handler for adding a new doctor (to be passed to DoctorAddModal)
   const handleAddDoctor = async (newDoctorData: NewDoctorDataForAPI) => {
     try {
       const response = await fetch("/api/doctors", {
@@ -506,6 +593,118 @@ export default function AdminDashboard() {
       toast.error(err.message || "Error adding doctor.");
       console.error("Error adding doctor:", err);
       throw err; // Re-throw to propagate error for modal to handle if needed
+    }
+  };
+
+  // NEW: Handlers for Admin Management actions
+  const handleEditAdminClick = (admin: Admin) => {
+    setCurrentAdmin(admin);
+    setIsAdminEditModalOpen(true);
+  };
+
+  const handlePasswordChangeAdminClick = (admin: Admin) => {
+    setCurrentAdmin(admin);
+    setIsAdminPasswordModalOpen(true);
+  };
+
+  const handleDeleteAdminClick = async (adminId: string) => {
+    // Preventing self-deletion: if the current admin tries to delete themselves, deny it.
+    if (session?.user?.email === currentAdmin?.email) {
+      toast.error("You cannot delete your own admin account from here.");
+      return;
+    }
+
+    if (
+      window.confirm(
+        "Are you sure you want to delete this administrator? This action cannot be undone."
+      )
+    ) {
+      try {
+        const res = await fetch(`/api/admins/${adminId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || "Administrator deleted successfully!");
+          fetchAdmins(); // Refresh the list
+        } else {
+          toast.error(data.message || "Failed to delete administrator.");
+        }
+      } catch (error) {
+        console.error("Delete admin error:", error);
+        toast.error("Network error or server unreachable.");
+      }
+    }
+  };
+
+  const handleAdminUpdate = async (updatedAdmin: Admin) => {
+    try {
+      const res = await fetch(`/api/admins/${updatedAdmin._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedAdmin),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Administrator updated successfully!");
+        setIsAdminEditModalOpen(false);
+        fetchAdmins(); // Refresh the list
+      } else {
+        toast.error(data.message || "Failed to update administrator.");
+      }
+    } catch (error) {
+      console.error("Update admin error:", error);
+      toast.error("Network error or server unreachable.");
+    }
+  };
+
+  const handleAdminPasswordUpdate = async (
+    adminId: string,
+    newPassword: string
+  ) => {
+    try {
+      const res = await fetch(`/api/admins/change-password/${adminId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Administrator password updated successfully!");
+        setIsAdminPasswordModalOpen(false);
+      } else {
+        toast.error(data.message || "Failed to update password.");
+      }
+    } catch (error) {
+      console.error("Admin password update error:", error);
+      toast.error("Network error or server unreachable.");
+    }
+  };
+
+  const handleAddAdmin = async (newAdminData: NewAdminDataForAPI) => {
+    try {
+      const response = await fetch("/api/admins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAdminData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add administrator.");
+      }
+
+      toast.success("Administrator added successfully!");
+      setIsAdminAddModalOpen(false);
+      fetchAdmins();
+    } catch (err: any) {
+      toast.error(err.message || "Error adding administrator.");
+      console.error("Error adding administrator:", err);
+      throw err;
     }
   };
 
@@ -858,7 +1057,6 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-
           {/* Doctor Management Table Section with Add Doctor Button */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-4">
@@ -1007,6 +1205,143 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+          {/* NEW: Admin Management Table Section */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Administrator Management
+              </h3>
+              <button
+                onClick={() => setIsAdminAddModalOpen(true)} // Opens the Admin Add modal
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-full flex items-center justify-center shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                title="Add New Administrator"
+              >
+                <FaPlus className="w-5 h-5 mr-2" />
+                <span>Add Administrator</span>
+              </button>
+            </div>
+            {adminsLoading ? (
+              <p>Loading administrator data...</p>
+            ) : adminsError ? (
+              <p className="text-red-500">{adminsError}</p>
+            ) : admins.length === 0 ? (
+              <p>No administrators found in the system.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Surname
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Email
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Phone
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Address
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        DoB
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Gender
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {admins.map((admin) => (
+                      <tr key={admin._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {admin.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {admin.surname}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {admin.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {admin.phone}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {admin.address
+                            ? `${admin.address.street}, ${admin.address.city}`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(admin.dateOfBirth).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {admin.gender}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <div className="flex justify-center items-center space-x-2">
+                            <button
+                              onClick={() => handleEditAdminClick(admin)}
+                              className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-100 transition duration-150"
+                              title="Edit Administrator"
+                            >
+                              <FaEdit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handlePasswordChangeAdminClick(admin)
+                              }
+                              className="text-yellow-600 hover:text-yellow-900 p-2 rounded-full hover:bg-yellow-100 transition duration-150"
+                              title="Change Administrator Password"
+                            >
+                              <FaKey className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAdminClick(admin._id)}
+                              className="text-red-600 hover:text-red-900 p-2 rounded-full hover:bg-red-100 transition duration-150"
+                              title="Delete Administrator"
+                            >
+                              <FaTrash className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>{" "}
+          {/* End Admin Management Section */}
         </main>
       </div>
 
@@ -1047,12 +1382,36 @@ export default function AdminDashboard() {
           onPasswordUpdate={handleDoctorPasswordUpdate}
         />
       )}
-      {/* NEW: Render DoctorAddModal based on its state */}
       {isDoctorAddModalOpen && (
         <DoctorAddModal
           isOpen={isDoctorAddModalOpen}
           onClose={() => setIsDoctorAddModalOpen(false)}
-          onAdd={handleAddDoctor} // Pass the handler to add the new doctor
+          onAdd={handleAddDoctor}
+        />
+      )}
+
+      {/* NEW: Admin Modals */}
+      {isAdminAddModalOpen && (
+        <AdminAddModal
+          isOpen={isAdminAddModalOpen}
+          onClose={() => setIsAdminAddModalOpen(false)}
+          onAdd={handleAddAdmin}
+        />
+      )}
+      {isAdminEditModalOpen && currentAdmin && (
+        <AdminEditModal
+          isOpen={isAdminEditModalOpen}
+          onClose={() => setIsAdminEditModalOpen(false)}
+          admin={currentAdmin}
+          onUpdate={handleAdminUpdate}
+        />
+      )}
+      {isAdminPasswordModalOpen && currentAdmin && (
+        <AdminPasswordChangeModal
+          isOpen={isAdminPasswordModalOpen}
+          onClose={() => setIsAdminPasswordModalOpen(false)}
+          adminId={currentAdmin._id}
+          onPasswordUpdate={handleAdminPasswordUpdate}
         />
       )}
     </div>
