@@ -1,10 +1,10 @@
 // components/Modals/AdminEditModal.tsx
-"use client"; // This component uses client-side hooks and features
+"use client";
 
 import { useState, useEffect, FormEvent } from "react";
 import { toast } from "react-toastify";
 
-// Define the Admin interface (matching the schema provided)
+
 interface Admin {
   _id: string;
   name: string;
@@ -18,10 +18,10 @@ interface Admin {
     zipCode: string;
     country: string;
   };
-  dateOfBirth: string; // Stored as ISO string (e.g., '2023-01-15T00:00:00.000Z')
-  gender: string; // "Male" or "Female"
-  role: string; // "admin"
-  lastLogin?: string; // Optional field
+  dateOfBirth: string;
+  gender: string; 
+  role: string; 
+  lastLogin?: string; 
   createdAt: string;
   updatedAt: string;
 }
@@ -39,7 +39,7 @@ export default function AdminEditModal({
   admin,
   onUpdate,
 }: AdminEditModalProps) {
-  // Initialize formData state with admin data, formatting dateOfBirth for input type="date"
+
   const [formData, setFormData] = useState<Admin>({
     ...admin,
     dateOfBirth: admin.dateOfBirth
@@ -78,7 +78,7 @@ export default function AdminEditModal({
 
   if (!isOpen) return null; // Render nothing if the modal is not open
 
-  // Universal change handler for input fields (including nested address fields)
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -136,10 +136,8 @@ export default function AdminEditModal({
           : "",
       };
 
-      // Call the 'onUpdate' prop provided by the parent component (AdminDashboard.tsx)
+
       await onUpdate(updatedAdminData);
-      // The parent component is responsible for handling the API call, showing success/error
-      // toasts, and then closing the modal if the update is successful.
     } catch (error: any) {
       console.error("Error updating admin in modal:", error);
       setMessage({
@@ -194,7 +192,7 @@ export default function AdminEditModal({
         )}
 
         <form
-          id="adminEditForm" // Important: Link the submit button to this form by ID
+          id="adminEditForm"
           onSubmit={handleSubmit}
           className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto flex-grow"
         >
@@ -270,7 +268,7 @@ export default function AdminEditModal({
               Phone
             </label>
             <input
-              type="tel" // Use type="tel" for phone numbers
+              type="tel"
               id="phone"
               name="phone"
               value={formData.phone}
@@ -295,7 +293,7 @@ export default function AdminEditModal({
               type="date"
               id="dateOfBirth"
               name="dateOfBirth"
-              value={formData.dateOfBirth} // Value is already formatted for 'date' type in useState
+              value={formData.dateOfBirth}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
@@ -459,7 +457,7 @@ export default function AdminEditModal({
           </button>
           <button
             type="submit"
-            form="adminEditForm" // Ensures this button submits the form with id "adminEditForm"
+            form="adminEditForm"
             disabled={isSubmitting}
             className="inline-flex justify-center py-2 px-5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
