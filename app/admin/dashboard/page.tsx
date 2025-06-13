@@ -1,7 +1,7 @@
 // app/admin/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useSession } from "next-auth/react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -17,10 +17,14 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { FaEdit, FaTrash, FaKey } from "react-icons/fa";
+import { FaEdit, FaTrash, FaKey, FaPlus } from "react-icons/fa";
 import PatientEditModal from "@/components/Modals/PatientEditModal";
-import PatientPasswordChangeModal from '@/components/Modals/PatientPasswordChangeModal';
+import PatientPasswordChangeModal from "@/components/Modals/PatientPasswordChangeModal";
+import DoctorEditModal from "@/components/Modals/DoctorEditModal";
+import DoctorPasswordChangeModal from "@/components/Modals/DoctorPasswordChangeModal";
+import DoctorAddModal from "@/components/Modals/DoctorAddModal"; // Re-import DoctorAddModal
 import { toast } from "react-toastify";
+// Removed: Link from next/link as we're using a modal now for adding
 
 // Register Chart.js components
 ChartJS.register(
@@ -55,6 +59,48 @@ interface Patient {
   updatedAt: string;
 }
 
+// Define the interface for Doctor data
+interface Doctor {
+  _id: string;
+  name: string;
+  surname: string;
+  specialization: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  dateOfBirth: string; // Stored as ISO string, will need formatting for date input
+  gender: string;
+  role: string;
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Define interface for new doctor data (for API call, without confirmPassword)
+interface NewDoctorDataForAPI {
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  dateOfBirth: string; // ISO string
+  gender: "Male" | "Female";
+  specialization: string;
+  password: string;
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
 
@@ -63,10 +109,23 @@ export default function AdminDashboard() {
   const [patientsLoading, setPatientsLoading] = useState(true);
   const [patientsError, setPatientsError] = useState<string | null>(null);
 
-  // State for modals
+  // State for Doctor Management
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(true);
+  const [doctorsError, setDoctorsError] = useState<string | null>(null);
+
+  // State for Patient Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null);
+
+  // State for Doctor Modals
+  const [isDoctorEditModalOpen, setIsDoctorEditModalOpen] = useState(false);
+  const [isDoctorPasswordModalOpen, setIsDoctorPasswordModalOpen] =
+    useState(false);
+  const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null);
+  // Re-added: State for "Add Doctor" Modal visibility
+  const [isDoctorAddModalOpen, setIsDoctorAddModalOpen] = useState(false);
 
   // Dummy Data for Quick Statistics
   const stats = {
@@ -75,7 +134,7 @@ export default function AdminDashboard() {
     totalRevenue: { amount: 7300, increase: 10 },
   };
 
-  // Dummy Data for Appointments Year by Year Chart (Line Chart)
+  // Dummy Data for Charts
   const appointmentsChartData = {
     labels: [
       "2016-03",
@@ -116,7 +175,6 @@ export default function AdminDashboard() {
     },
   };
 
-  // Dummy Data for Patients Year by Year Chart (Bar Chart)
   const patientsChartData = {
     labels: ["2012", "2013", "2014", "2015", "2016", "2017", "2018"],
     datasets: [
@@ -144,7 +202,7 @@ export default function AdminDashboard() {
     },
   };
 
-  // Dummy Data for Appointments Table (Already exists)
+  // Dummy Data for Appointments Table
   const appointmentsTableData = [
     {
       patientName: "Rajesh",
@@ -214,7 +272,7 @@ export default function AdminDashboard() {
     setPatientsLoading(true);
     setPatientsError(null);
     try {
-      const res = await fetch("/api/patients"); // Fetch from your new API route
+      const res = await fetch("/api/patients");
       const data = await res.json();
       if (res.ok) {
         setPatients(data.data);
@@ -231,10 +289,33 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fetch patients on component mount and if session changes
+  // Function to fetch doctors data
+  const fetchDoctors = async () => {
+    setDoctorsLoading(true);
+    setDoctorsError(null);
+    try {
+      const res = await fetch("/api/doctors");
+      const data = await res.json();
+      if (res.ok) {
+        setDoctors(data.data);
+      } else {
+        setDoctorsError(data.message || "Failed to fetch doctors");
+        toast.error(data.message || "Failed to fetch doctors");
+      }
+    } catch (err) {
+      console.error("Fetch doctors error:", err);
+      setDoctorsError("Network error or server unreachable for doctors data");
+      toast.error("Network error or server unreachable for doctors data");
+    } finally {
+      setDoctorsLoading(false);
+    }
+  };
+
+  // Fetch data on component mount and if session changes
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role === "admin") {
       fetchPatients();
+      fetchDoctors();
     }
   }, [session, status]);
 
@@ -251,26 +332,25 @@ export default function AdminDashboard() {
 
   const handleDeleteClick = async (patientId: string) => {
     if (
-      !confirm(
+      window.confirm(
         "Are you sure you want to delete this patient? This action cannot be undone."
       )
     ) {
-      return;
-    }
-    try {
-      const res = await fetch(`/api/patients/${patientId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message || "Patient deleted successfully!");
-        fetchPatients(); // Refresh the list
-      } else {
-        toast.error(data.message || "Failed to delete patient.");
+      try {
+        const res = await fetch(`/api/patients/${patientId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || "Patient deleted successfully!");
+          fetchPatients(); // Refresh the list
+        } else {
+          toast.error(data.message || "Failed to delete patient.");
+        }
+      } catch (error) {
+        console.error("Delete patient error:", error);
+        toast.error("Network error or server unreachable.");
       }
-    } catch (error) {
-      console.error("Delete patient error:", error);
-      toast.error("Network error or server unreachable.");
     }
   };
 
@@ -322,6 +402,113 @@ export default function AdminDashboard() {
     }
   };
 
+  // Handlers for Doctor Management actions
+  const handleEditDoctorClick = (doctor: Doctor) => {
+    setCurrentDoctor(doctor);
+    setIsDoctorEditModalOpen(true);
+  };
+
+  const handlePasswordChangeDoctorClick = (doctor: Doctor) => {
+    setCurrentDoctor(doctor);
+    setIsDoctorPasswordModalOpen(true);
+  };
+
+  const handleDeleteDoctorClick = async (doctorId: string) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this doctor? This action cannot be undone."
+      )
+    ) {
+      try {
+        const res = await fetch(`/api/doctors/${doctorId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || "Doctor deleted successfully!");
+          fetchDoctors(); // Refresh the list
+        } else {
+          toast.error(data.message || "Failed to delete doctor.");
+        }
+      } catch (error) {
+        console.error("Delete doctor error:", error);
+        toast.error("Network error or server unreachable.");
+      }
+    }
+  };
+
+  const handleDoctorUpdate = async (updatedDoctor: Doctor) => {
+    try {
+      const res = await fetch(`/api/doctors/${updatedDoctor._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedDoctor),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Doctor updated successfully!");
+        setIsDoctorEditModalOpen(false);
+        fetchDoctors(); // Refresh the list
+      } else {
+        toast.error(data.message || "Failed to update doctor.");
+      }
+    } catch (error) {
+      console.error("Update doctor error:", error);
+      toast.error("Network error or server unreachable.");
+    }
+  };
+
+  const handleDoctorPasswordUpdate = async (
+    doctorId: string,
+    newPassword: string
+  ) => {
+    try {
+      const res = await fetch(`/api/doctors/change-password/${doctorId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Doctor password updated successfully!");
+        setIsDoctorPasswordModalOpen(false);
+      } else {
+        toast.error(data.message || "Failed to update password.");
+      }
+    } catch (error) {
+      console.error("Doctor password update error:", error);
+      toast.error("Network error or server unreachable.");
+    }
+  };
+
+  // Re-added: Handler for adding a new doctor (to be passed to DoctorAddModal)
+  const handleAddDoctor = async (newDoctorData: NewDoctorDataForAPI) => {
+    try {
+      const response = await fetch("/api/doctors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDoctorData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add doctor.");
+      }
+
+      toast.success("Doctor added successfully!");
+      setIsDoctorAddModalOpen(false); // Close the modal on success
+      fetchDoctors(); // Re-fetch doctors to update the list on the dashboard
+    } catch (err: any) {
+      toast.error(err.message || "Error adding doctor.");
+      console.error("Error adding doctor:", err);
+      throw err; // Re-throw to propagate error for modal to handle if needed
+    }
+  };
+
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -345,9 +532,7 @@ export default function AdminDashboard() {
       <Header />
 
       <div className="flex flex-1">
-
         <main className="flex-1 p-6 md:p-8 space-y-6">
-          {" "}
           <h1 className="text-3xl font-bold mb-6 text-gray-800">
             Admin Dashboard
           </h1>
@@ -536,7 +721,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           </div>
-          {/* NEW: Patient Management Table Section */}
+          {/* Patient Management Table Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Patient Management
@@ -673,10 +858,161 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+
+          {/* Doctor Management Table Section with Add Doctor Button */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Doctor Management
+              </h3>
+              {/* CORRECTED: Button to open the Add Doctor Modal */}
+              <button
+                onClick={() => setIsDoctorAddModalOpen(true)} // Opens the modal
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full flex items-center justify-center shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                title="Add New Doctor"
+              >
+                <FaPlus className="w-5 h-5 mr-2" />
+                <span>Add Doctor</span>
+              </button>
+            </div>
+            {doctorsLoading ? (
+              <p>Loading doctor data...</p>
+            ) : doctorsError ? (
+              <p className="text-red-500">{doctorsError}</p>
+            ) : doctors.length === 0 ? (
+              <p>No doctors found in the system.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Surname
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Specialization
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Email
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Phone
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Address
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        DoB
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Gender
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {doctors.map((doctor) => (
+                      <tr key={doctor._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {doctor.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doctor.surname}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doctor.specialization}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doctor.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doctor.phone}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doctor.address
+                            ? `${doctor.address.street}, ${doctor.address.city}`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(doctor.dateOfBirth).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doctor.gender}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <div className="flex justify-center items-center space-x-2">
+                            <button
+                              onClick={() => handleEditDoctorClick(doctor)}
+                              className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-100 transition duration-150"
+                              title="Edit Doctor"
+                            >
+                              <FaEdit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handlePasswordChangeDoctorClick(doctor)
+                              }
+                              className="text-yellow-600 hover:text-yellow-900 p-2 rounded-full hover:bg-yellow-100 transition duration-150"
+                              title="Change Doctor Password"
+                            >
+                              <FaKey className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteDoctorClick(doctor._id)
+                              }
+                              className="text-red-600 hover:text-red-900 p-2 rounded-full hover:bg-red-100 transition duration-150"
+                              title="Delete Doctor"
+                            >
+                              <FaTrash className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </main>
       </div>
+
       <Footer />
 
+      {/* Patient Modals */}
       {isEditModalOpen && currentPatient && (
         <PatientEditModal
           isOpen={isEditModalOpen}
@@ -685,13 +1021,38 @@ export default function AdminDashboard() {
           onUpdate={handlePatientUpdate}
         />
       )}
-
       {isPasswordModalOpen && currentPatient && (
         <PatientPasswordChangeModal
           isOpen={isPasswordModalOpen}
           onClose={() => setIsPasswordModalOpen(false)}
           patientId={currentPatient._id}
           onPasswordUpdate={handlePasswordUpdate}
+        />
+      )}
+
+      {/* Doctor Modals */}
+      {isDoctorEditModalOpen && currentDoctor && (
+        <DoctorEditModal
+          isOpen={isDoctorEditModalOpen}
+          onClose={() => setIsDoctorEditModalOpen(false)}
+          doctor={currentDoctor}
+          onUpdate={handleDoctorUpdate}
+        />
+      )}
+      {isDoctorPasswordModalOpen && currentDoctor && (
+        <DoctorPasswordChangeModal
+          isOpen={isDoctorPasswordModalOpen}
+          onClose={() => setIsDoctorPasswordModalOpen(false)}
+          doctorId={currentDoctor._id}
+          onPasswordUpdate={handleDoctorPasswordUpdate}
+        />
+      )}
+      {/* NEW: Render DoctorAddModal based on its state */}
+      {isDoctorAddModalOpen && (
+        <DoctorAddModal
+          isOpen={isDoctorAddModalOpen}
+          onClose={() => setIsDoctorAddModalOpen(false)}
+          onAdd={handleAddDoctor} // Pass the handler to add the new doctor
         />
       )}
     </div>
