@@ -63,12 +63,9 @@ export default function DoctorPasswordChangeModal({
     }
 
     try {
-      // Pass the new password to the parent handler
       onPasswordUpdate(doctorId, newPassword);
       // Parent will handle closing modal and showing toast if successful
     } catch (err) {
-      // Error handling is mostly done by the parent onPasswordUpdate,
-      // but catch any unexpected local errors here.
       console.error("Local password update error:", err);
       setError("An unexpected error occurred. Please try again.");
       toast.error("An unexpected error occurred.");

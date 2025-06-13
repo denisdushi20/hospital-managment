@@ -1,12 +1,9 @@
 // components/Modals/DoctorAddModal.tsx
-"use client"; // This component uses client-side hooks and features
+"use client";
 
 import { useState, useEffect, FormEvent } from "react";
 import { toast } from "react-toastify";
 
-// Define the shape of the data for adding a NEW doctor,
-// strictly matching your provided Doctor Mongoose Schema fields,
-// plus client-side only fields like confirmPassword.
 interface NewDoctorData {
   name: string;
   surname: string;
@@ -19,8 +16,8 @@ interface NewDoctorData {
     zipCode: string;
     country: string;
   };
-  dateOfBirth: string; // 'YYYY-MM-DD' string for input type="date"
-  gender: "Male" | "Female" | ""; // "" for initial empty state
+  dateOfBirth: string;
+  gender: "Male" | "Female" | ""; 
   specialization: string;
   password: string;
   confirmPassword: string; // Client-side validation only
@@ -29,8 +26,6 @@ interface NewDoctorData {
 interface DoctorAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // This prop will be called by the parent component (e.g., AdminDashboard)
-  // to actually send the new doctor data to your API.
   onAdd: (newDoctor: Omit<NewDoctorData, "confirmPassword">) => Promise<void>;
 }
 
@@ -104,7 +99,7 @@ export default function DoctorAddModal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null; // Render nothing if the modal is not open
+  if (!isOpen) return null;
 
   // Universal change handler for input fields (including nested address fields)
   const handleChange = (
@@ -235,10 +230,8 @@ export default function DoctorAddModal({
           : "",
       };
 
-      // Call the 'onAdd' prop provided by the parent component
+
       await onAdd(finalNewDoctorData);
-      // The parent component is responsible for handling the API call, showing toasts,
-      // and then closing the modal if successful.
     } catch (error: any) {
       console.error("Error adding doctor in modal:", error);
       setMessage({

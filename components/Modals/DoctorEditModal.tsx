@@ -1,10 +1,9 @@
 // components/Modals/DoctorEditModal.tsx
-'use client'; // This component uses client-side hooks and features
+'use client';
 
 import { useState, useEffect, FormEvent } from "react";
 import { toast } from "react-toastify";
 
-// Define the Doctor interface (matching the schema provided)
 interface Doctor {
   _id: string;
   name: string;
@@ -19,10 +18,10 @@ interface Doctor {
     zipCode: string;
     country: string;
   };
-  dateOfBirth: string; // Stored as ISO string (e.g., '2023-01-15T00:00:00.000Z')
-  gender: string; // "Male" or "Female"
-  role: string; // "doctor"
-  lastLogin?: string; // Optional field
+  dateOfBirth: string;
+  gender: string; 
+  role: string; 
+  lastLogin?: string; 
   createdAt: string;
   updatedAt: string;
 }
@@ -31,7 +30,7 @@ interface DoctorEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   doctor: Doctor;
-  onUpdate: (updatedDoctor: Doctor) => Promise<void>; // Assuming onUpdate is async
+  onUpdate: (updatedDoctor: Doctor) => Promise<void>; 
 }
 
 export default function DoctorEditModal({
@@ -51,7 +50,6 @@ export default function DoctorEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Reset form data and messages when the modal is opened or a different doctor is loaded
     setFormData({
       ...doctor,
       dateOfBirth: doctor.dateOfBirth ? new Date(doctor.dateOfBirth).toISOString().split('T')[0] : '',
@@ -59,7 +57,6 @@ export default function DoctorEditModal({
     setMessage(null);
   }, [doctor, isOpen]);
 
-  // Effect to manage body overflow when modal is open/closed (prevents background scrolling)
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -72,7 +69,7 @@ export default function DoctorEditModal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null; // Don't render the modal content if it's not open
+  if (!isOpen) return null;
 
   const handleChange = (
     e: React.ChangeEvent<
