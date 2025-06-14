@@ -14,14 +14,15 @@ export default async function handler(
   // Check for authenticated session and admin role
   const session = await getServerSession(req, res, authOptions);
 
-  if (!session || session.user?.role !== "admin") {
+  if (
+    !session ||
+    (session.user?.role !== "admin" && session.user?.role !== "doctor")
+  ) {
     // Assuming your session user object has a 'role' property
-    return res
-      .status(401)
-      .json({
-        success: false,
-        error: "Unauthorized: Admin access required to change doctor password",
-      });
+    return res.status(401).json({
+      success: false,
+      error: "Unauthorized: Admin access required to change doctor password",
+    });
   }
 
   await dbConnect(); // Connect to your database
