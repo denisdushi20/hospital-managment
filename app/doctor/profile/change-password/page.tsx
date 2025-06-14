@@ -234,6 +234,16 @@ export default function DoctorChangePasswordPage() {
                 </button>
               </div>
             </form>
+
+            {/* Back to Profile Button - Added here */}
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => router.push("/doctor/profile")} // Path to doctor's main profile page
+                className="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-300 transition-colors duration-200 shadow-md"
+              >
+                Back to Profile
+              </button>
+            </div>
           </div>
         </main>
       </div>

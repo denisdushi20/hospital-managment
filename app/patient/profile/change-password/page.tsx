@@ -4,7 +4,10 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+// Removed signOut import as it's no longer used
+// import { signOut } from "next-auth/react";
+import Header from "@/components/Header"; // Assuming you have a Header component
+import PatientSidebar from "@/components/Sidebar/PatientSidebar"; // Assuming PatientSidebar exists
 
 export default function ChangePasswordPage() {
   const { data: session, status } = useSession();
@@ -21,6 +24,9 @@ export default function ChangePasswordPage() {
   } | null>(null);
 
   useEffect(() => {
+    if (status === "loading") {
+      return; // Keep loading state
+    }
     if (status === "unauthenticated") {
       router.push("/login");
     }
@@ -56,6 +62,8 @@ export default function ChangePasswordPage() {
     }
 
     try {
+      // Assuming your API path for patient password change is /api/user/change-password
+      // If it should use the [id].ts pattern, you would change it to `/api/user/change-password/${session.user.id}`
       const response = await fetch("/api/user/change-password", {
         method: "PUT",
         headers: {
@@ -85,115 +93,129 @@ export default function ChangePasswordPage() {
     }
   };
 
+  // Render loading state while session status is 'loading'
   if (status === "loading") {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-white">
-        {" "}
-        {/* Changed bg-gray-100 to bg-white */}
-        <p className="text-gray-600">Loading...</p>
+      <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
+        <p className="text-gray-600 text-lg">Loading...</p>
       </div>
     );
   }
 
+  // Only render the form if authenticated
   if (status === "authenticated") {
     return (
-      // Changed bg-gray-100 to bg-white
-      // Added `h-screen` or `min-h-screen` if not handled by a parent layout to ensure it fills the height
-      <div className="flex-1 p-8 flex flex-col items-center justify-center bg-white min-h-screen">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-          <h1 className="text-3xl font-bold text-blue-700 mb-6 text-center">
-            Change Password
-          </h1>
-
-          {message && (
-            <div
-              className={`p-3 rounded-md mb-4 text-sm ${
-                message.type === "success"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {message.text}
+      <div className="flex flex-col min-h-screen bg-gray-100">
+        {" "}
+        {/* Matches doctor profile main container */}
+        <Header />
+        <div className="flex flex-1">
+          {" "}
+          {/* Flex container for sidebar and main content */}
+          <PatientSidebar />
+          <main className="flex-1 p-8 flex flex-col items-center">
+            {" "}
+            {/* Matches doctor profile main content */}
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+              {" "}
+              {/* Adjusted max-w for content */}
+              <h1 className="text-4xl font-bold text-blue-900 mb-8 text-center">
+                {" "}
+                {/* Matches doctor profile heading */}
+                Change Password
+              </h1>
+              {message && (
+                <div
+                  className={`mb-6 p-4 rounded-lg border text-center text-lg font-medium ${
+                    // Matches doctor profile message box
+                    message.type === "success"
+                      ? "bg-green-100 text-green-700 border-green-200"
+                      : "bg-red-100 text-red-700 border-red-200"
+                  }`}
+                >
+                  {message.text}
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {" "}
+                {/* Increased space-y for consistency */}
+                {/* Current Password */}
+                <div>
+                  <label
+                    htmlFor="currentPassword"
+                    className="block text-gray-700 text-lg font-semibold mb-2" // Matches doctor profile labels
+                  >
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    name="currentPassword"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800" // Matches doctor profile inputs
+                    required
+                  />
+                </div>
+                {/* New Password */}
+                <div>
+                  <label
+                    htmlFor="newPassword"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    name="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+                {/* Confirm New Password */}
+                <div>
+                  <label
+                    htmlFor="confirmNewPassword"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmNewPassword"
+                    name="confirmNewPassword"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end pt-4">
+                  {" "}
+                  {/* Aligned button to the right */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-3 bg-blue-700 text-white font-semibold rounded-full hover:bg-blue-800 transition-colors duration-200 shadow-lg transform hover:scale-105" // Matches doctor profile primary button
+                  >
+                    {isSubmitting ? "Changing..." : "Change Password"}
+                  </button>
+                </div>
+              </form>
+              {/* Back to Profile Button - Styled to match secondary buttons */}
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => router.push("/patient/profile")}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-300 transition-colors duration-200 shadow-md"
+                >
+                  Back to Profile
+                </button>
+              </div>
             </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Current Password */}
-            <div>
-              <label
-                htmlFor="currentPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Current Password
-              </label>
-              <input
-                type="password"
-                id="currentPassword"
-                name="currentPassword"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-black rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-
-            {/* New Password */}
-            <div>
-              <label
-                htmlFor="newPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                New Password
-              </label>
-              <input
-                type="password"
-                id="newPassword"
-                name="newPassword"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-black rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-
-            {/* Confirm New Password */}
-            <div>
-              <label
-                htmlFor="confirmNewPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                id="confirmNewPassword"
-                name="confirmNewPassword"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-black rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed w-full"
-              >
-                {isSubmitting ? "Changing..." : "Change Password"}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => router.push("/patient/profile")}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              Back to Profile
-            </button>
-          </div>
+          </main>
         </div>
       </div>
     );

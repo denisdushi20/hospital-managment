@@ -1,7 +1,7 @@
 // app/doctor/dashboard/page.tsx
 "use client";
 
-import DoctorSidebar from "@/components/Sidebar/DoctorSidebar"; // Import DoctorSidebar
+import DoctorSidebar from "@/components/Sidebar/DoctorSidebar";
 import Header from "@/components/Header";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -64,7 +64,7 @@ export default function DoctorDashboard() {
     <div className="flex flex-col min-h-screen bg-gray-100">
       <Header />
       <div className="flex flex-1">
-        <DoctorSidebar /> {/* Changed to DoctorSidebar */}
+        <DoctorSidebar />
         <main className="flex-1 p-8 flex flex-col items-center justify-center">
           <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl text-center">
             <h1 className="text-4xl font-extrabold text-blue-700 mb-4">
@@ -92,16 +92,16 @@ export default function DoctorDashboard() {
                 </button>
               </div>
               <div className="bg-green-50 p-6 rounded-md text-green-800 border border-green-200">
-                <h2 className="text-2xl font-semibold mb-2">Manage Patients</h2>
+                <h2 className="text-2xl font-semibold mb-2">Manage Appointments</h2>
                 <p>
-                  View your patient list, access medical histories, and manage
+                  Access medical histories, and manage
                   appointments.
                 </p>
                 <button
                   onClick={goToPatientsOrAppointments}
                   className="mt-4 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
-                  Go to Patients
+                  Go to Appointments
                 </button>
               </div>
               {/* You can add more sections here */}
