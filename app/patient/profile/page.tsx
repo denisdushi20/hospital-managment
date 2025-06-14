@@ -1,10 +1,28 @@
 // app/patient/profile/page.tsx
 "use client";
 
+import PatientSidebar from "@/components/Sidebar/PatientSidebar";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import Header from "@/components/Header";
+
+// Define the shape of the patient's profile data based on your Mongoose schema
+type PatientProfileFormData = {
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  dateOfBirth: string;
+  gender: "Male" | "Female" | "";
+};
 
 export default function PatientProfilePage() {
   const { data: session, status, update } = useSession();
@@ -12,16 +30,16 @@ export default function PatientProfilePage() {
 
   // State to manage form inputs
   const [name, setName] = useState("");
-  const [surname, setSurname] = useState(""); // New state
+  const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); // New state
-  const [street, setStreet] = useState(""); // New state for address
-  const [city, setCity] = useState(""); // New state for address
-  const [state, setState] = useState(""); // New state for address
-  const [zipCode, setZipCode] = useState(""); // New state for address
-  const [country, setCountry] = useState(""); // New state for address
-  const [dateOfBirth, setDateOfBirth] = useState(""); // New state (string for input type="date")
-  const [gender, setGender] = useState(""); // New state
+  const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [country, setCountry] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{
@@ -29,15 +47,13 @@ export default function PatientProfilePage() {
     text: string;
   } | null>(null);
 
-  // Helper to format Date for input type="date"
   const formatDateForInput = (dateString: string | Date | undefined) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return ""; // Invalid date
+    if (isNaN(date.getTime())) return "";
     return date.toISOString().split("T")[0];
   };
 
-  // Populate form fields with session data when it's available
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
       setName(session.user.name || "");
@@ -59,7 +75,7 @@ export default function PatientProfilePage() {
   // Handle form submission for profile update
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage(null); // Clear previous messages
+    setMessage(null);
     setIsSubmitting(true);
 
     // Basic required field validation (adjust based on your schema's required fields)
@@ -101,7 +117,7 @@ export default function PatientProfilePage() {
         zipCode,
         country,
       },
-      dateOfBirth, // Send as string, API will convert to Date
+      dateOfBirth,
       gender,
     };
 
@@ -134,25 +150,45 @@ export default function PatientProfilePage() {
     }
   };
 
+  // Function to reset form fields to their initial session values
+  const handleReset = () => {
+    if (session?.user) {
+      setName(session.user.name || "");
+      setSurname(session.user.surname || "");
+      setEmail(session.user.email || "");
+      setPhone(session.user.phone || "");
+      setStreet(session.user.address?.street || "");
+      setCity(session.user.address?.city || "");
+      setState(session.user.address?.state || "");
+      setZipCode(session.user.address?.zipCode || "");
+      setCountry(session.user.address?.country || "");
+      setDateOfBirth(formatDateForInput(session.user.dateOfBirth ?? undefined));
+      setGender(session.user.gender || "");
+    }
+    setMessage(null); // Clear any messages
+  };
+
   const handleChangePassword = () => {
     router.push("/patient/profile/change-password");
   };
 
   if (status === "loading") {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <p className="text-gray-600">Loading profile...</p>
+      <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
+        <p className="text-gray-600 text-lg">Loading profile...</p>
       </div>
     );
   }
 
   if (status === "unauthenticated") {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <p className="text-red-500">You must be logged in to view this page.</p>
+      <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
+        <p className="text-red-500 text-lg">
+          You must be logged in to view this page.
+        </p>
         <button
           onClick={() => router.push("/login")}
-          className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           Login
         </button>
@@ -161,283 +197,294 @@ export default function PatientProfilePage() {
   }
 
   return (
-    <div className="flex-1 p-8 flex flex-col items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg">
-        <h1 className="text-3xl font-bold text-blue-700 mb-6 text-center">
-          Your Profile
-        </h1>
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      <Header />
+      <div className="flex flex-1">
+        <PatientSidebar />
+        <main className="flex-1 p-8 flex flex-col items-center">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+            <h1 className="text-4xl font-bold text-blue-900 mb-8 text-center">
+              Your Profile
+            </h1>
 
-        {message && (
-          <div
-            className={`p-3 rounded-md mb-4 text-sm ${
-              message.type === "success"
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              required
-            />
-          </div>
-
-          {/* Surname */}
-          <div>
-            <label
-              htmlFor="surname"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Surname
-            </label>
-            <input
-              type="text"
-              id="surname"
-              name="surname"
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              required
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              required
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Phone
-            </label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              required
-            />
-          </div>
-
-          {/* Address Fields */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-gray-800">Address</h3>
-            <div>
-              <label
-                htmlFor="street"
-                className="block text-sm font-medium text-gray-700 mb-1"
+            {message && (
+              <div
+                className={`mb-6 p-4 rounded-lg border text-center text-lg font-medium ${
+                  message.type === "success"
+                    ? "bg-green-100 text-green-700 border-green-200"
+                    : "bg-red-100 text-red-700 border-red-200"
+                }`}
               >
-                Street
-              </label>
-              <input
-                type="text"
-                id="street"
-                name="street"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="city"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                {message.text}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Name */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                  required
+                />
+              </div>
+
+              {/* Surname */}
+              <div>
+                <label
+                  htmlFor="surname"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Surname
+                </label>
+                <input
+                  type="text"
+                  id="surname"
+                  name="surname"
+                  value={surname}
+                  onChange={(e) => setSurname(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                  required
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                  required
+                />
+              </div>
+
+              {/* Address Fields */}
+              <h3 className="text-xl font-semibold text-gray-800 mt-8 mb-4">
+                Address Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="street"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    Street
+                  </label>
+                  <input
+                    type="text"
+                    id="street"
+                    name="street"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="city"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="state"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="zipCode"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    Zip Code
+                  </label>
+                  <input
+                    type="text"
+                    id="zipCode"
+                    name="zipCode"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="country"
+                    className="block text-gray-700 text-lg font-semibold mb-2"
+                  >
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    id="country"
+                    name="country"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Date of Birth */}
+              <div>
+                <label
+                  htmlFor="dateOfBirth"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800"
+                  required
+                />
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label
+                  htmlFor="gender"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Gender
+                </label>
+                <select
+                  id="gender"
+                  name="gender"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-gray-800 bg-white"
+                  required
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+
+              {/* Role (Read-Only) */}
+              <div>
+                <label
+                  htmlFor="role"
+                  className="block text-gray-700 text-lg font-semibold mb-2"
+                >
+                  Role
+                </label>
+                <input
+                  type="text"
+                  id="role"
+                  name="role"
+                  value={session?.user?.role || "N/A"}
+                  className="w-full p-3 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed text-gray-700"
+                  readOnly
+                />
+              </div>
+
+              {/* Form Actions - Save and Reset Buttons */}
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-300 transition-colors duration-200 shadow-md"
+                  disabled={isSubmitting}
+                >
+                  Reset
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-3 bg-blue-700 text-white font-semibold rounded-full hover:bg-blue-800 transition-colors duration-200 shadow-lg transform hover:scale-105"
+                >
+                  {isSubmitting ? "Updating..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+
+            {/* Separate section for Change Password */}
+            <div className="mt-10 pt-6 border-t border-gray-200 text-center">
+              <h2 className="text-2xl font-bold text-blue-900 mb-4">
+                Change Password
+              </h2>
+              <p className="text-gray-700 mb-4">
+                You can update your account password here for enhanced security.
+              </p>
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                className="px-6 py-3 bg-yellow-600 text-white font-semibold rounded-full hover:bg-yellow-700 transition-colors duration-200 shadow-md transform hover:scale-105"
               >
-                City
-              </label>
-              <input
-                type="text"
-                id="city"
-                name="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="state"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                State
-              </label>
-              <input
-                type="text"
-                id="state"
-                name="state"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="zipCode"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Zip Code
-              </label>
-              <input
-                type="text"
-                id="zipCode"
-                name="zipCode"
-                value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="country"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Country
-              </label>
-              <input
-                type="text"
-                id="country"
-                name="country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                required
-              />
+                Change Password
+              </button>
             </div>
           </div>
-
-          {/* Date of Birth */}
-          <div>
-            <label
-              htmlFor="dateOfBirth"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Date of Birth
-            </label>
-            <input
-              type="date"
-              id="dateOfBirth"
-              name="dateOfBirth"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              required
-            />
-          </div>
-
-          {/* Gender */}
-          <div>
-            <label
-              htmlFor="gender"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Gender
-            </label>
-            <select
-              id="gender"
-              name="gender"
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              required
-            >
-              <option value="" className="text-black">
-                Select Gender
-              </option>
-              <option value="Male" className="text-black">
-                Male
-              </option>
-              <option value="Female" className="text-black">
-                Female
-              </option>
-            </select>
-          </div>
-
-          {/* Role (Read-Only) */}
-          <div>
-            <label
-              htmlFor="role"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Role
-            </label>
-            <input
-              type="text"
-              id="role"
-              name="role"
-              value={session?.user?.role || "N/A"}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed sm:text-sm"
-              readOnly
-            />
-          </div>
-
-          <div className="flex justify-between items-center pt-4">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Updating..." : "Update Profile"}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleChangePassword}
-              className="ml-4 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Change Password
-            </button>
-          </div>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
-          >
-            Logout
-          </button>
-        </div>
+        </main>
       </div>
     </div>
   );
