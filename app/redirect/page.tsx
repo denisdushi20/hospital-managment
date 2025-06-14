@@ -37,13 +37,13 @@ export default function RedirectPage() {
         );
         router.replace("/login");
       } else if (role === "admin") {
-        router.replace("/admin/dashboard");
+        router.replace("/"); 
       } else if (role === "doctor") {
-        router.replace("/doctor/dashboard");
+        router.replace("/");
       } else if (role === "patient") {
-        router.replace("/patient/dashboard");
+        router.replace("/");
       } else {
-        // Fallback for an unknown role
+        // Fallback for an unknown role, redirect to home page
         router.replace("/");
       }
     }
