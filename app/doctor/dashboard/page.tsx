@@ -11,6 +11,8 @@ export default function DoctorDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+
+
   // Handle loading state and unauthorized access
   useEffect(() => {
     if (status === "loading") {
@@ -41,10 +43,8 @@ export default function DoctorDashboard() {
     router.push("/doctor/profile");
   };
 
-  const goToPatientsOrAppointments = () => {
-    // You can choose to redirect to a patients list or appointments list
-    router.push("/doctor/patients"); // Example: redirect to a page showing doctor's patients
-    // OR: router.push("/doctor/appointments"); // Example: redirect to a page showing doctor's appointments
+  const goToAppointments = () => {
+    router.push("/doctor/appointments");
   };
 
   // Render loading state or access denied message if session is not ready or unauthorized
@@ -92,13 +92,12 @@ export default function DoctorDashboard() {
                 </button>
               </div>
               <div className="bg-green-50 p-6 rounded-md text-green-800 border border-green-200">
-                <h2 className="text-2xl font-semibold mb-2">Manage Appointments</h2>
-                <p>
-                  Access medical histories, and manage
-                  appointments.
-                </p>
+                <h2 className="text-2xl font-semibold mb-2">
+                  Manage Appointments
+                </h2>
+                <p>Access medical histories, and manage appointments.</p>
                 <button
-                  onClick={goToPatientsOrAppointments}
+                  onClick={goToAppointments}
                   className="mt-4 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
                   Go to Appointments

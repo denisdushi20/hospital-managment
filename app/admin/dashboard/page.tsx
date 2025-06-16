@@ -17,7 +17,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { FaEdit, FaTrash, FaKey, FaPlus } from "react-icons/fa";
+import { FaEdit, FaTrash, FaKey, FaPlus } from "react-icons/fa"; // FaPlus is still used for Doctor/Admin Add buttons
 import PatientEditModal from "@/components/Modals/PatientEditModal";
 import PatientPasswordChangeModal from "@/components/Modals/PatientPasswordChangeModal";
 import DoctorEditModal from "@/components/Modals/DoctorEditModal";
@@ -26,9 +26,9 @@ import DoctorAddModal from "@/components/Modals/DoctorAddModal";
 import AdminAddModal from "@/components/Modals/AdminAddModal";
 import AdminEditModal from "@/components/Modals/AdminEditModal";
 import AdminPasswordChangeModal from "@/components/Modals/AdminPasswordChangeModal";
+import AppointmentEditModal from "@/components/Modals/AppointmentEditModal";
 
 import { toast } from "react-toastify";
-
 
 // Register Chart.js components
 ChartJS.register(
@@ -105,7 +105,7 @@ interface NewDoctorDataForAPI {
   password: string;
 }
 
-// NEW: Define the interface for Admin data (from your provided schema)
+// Define the interface for Admin data (from your provided schema)
 interface Admin {
   _id: string;
   name: string;
@@ -127,7 +127,7 @@ interface Admin {
   updatedAt: string;
 }
 
-// NEW: Define interface for new Admin data (for API call, without confirmPassword)
+// Define interface for new Admin data (for API call, without confirmPassword)
 interface NewAdminDataForAPI {
   name: string;
   surname: string;
@@ -143,6 +143,31 @@ interface NewAdminDataForAPI {
   dateOfBirth: string; // ISO string
   gender: "Male" | "Female";
   password: string;
+}
+
+// NEW: Define the interface for Appointment data
+// Assuming the API will populate patient and doctor fields with their names/surnames
+interface Appointment {
+  _id: string;
+  patient:
+    | { _id: string; name: string; surname: string; email: string }
+    | string; // Can be ObjectId string or populated object
+  doctor:
+    | {
+        _id: string;
+        name: string;
+        surname: string;
+        specialization: string;
+        email: string;
+      }
+    | string; // Can be ObjectId string or populated object
+  date: string; // ISO Date string from backend
+  time: string; // e.g., "10:00 AM" or "14:30"
+  reason: string;
+  status: "Scheduled" | "Completed" | "Cancelled" | "Pending"; // Status of the appointment
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function AdminDashboard() {
@@ -163,6 +188,13 @@ export default function AdminDashboard() {
   const [adminsLoading, setAdminsLoading] = useState(true);
   const [adminsError, setAdminsError] = useState<string | null>(null);
 
+  // NEW: State for Appointment Management
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(
+    null
+  );
+
   // State for Patient Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -182,14 +214,14 @@ export default function AdminDashboard() {
     useState(false);
   const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
-  // Dummy Data for Quick Statistics
-  const stats = {
-    patients: { count: 348, increase: 20 },
-    appointments: { count: 1585, decrease: 15 },
-    totalRevenue: { amount: 7300, increase: 10 },
-  };
+  // NEW: State for Appointment Modals
+  // Removed isAppointmentAddModalOpen
+  const [isAppointmentEditModalOpen, setIsAppointmentEditModalOpen] =
+    useState(false);
+  const [currentAppointment, setCurrentAppointment] =
+    useState<Appointment | null>(null);
 
-  // Dummy Data for Charts
+  // Dummy Data for Charts (Keeping for now, actual data will come from APIs)
   const appointmentsChartData = {
     labels: [
       "2016-03",
@@ -257,58 +289,6 @@ export default function AdminDashboard() {
     },
   };
 
-  // Dummy Data for Appointments Table
-  const appointmentsTableData = [
-    {
-      patientName: "Rajesh",
-      doctor: "Mancy Kumar",
-      checkUp: "Dental",
-      date: "12-10-2018",
-      time: "12:10PM",
-      status: "Completed",
-    },
-    {
-      patientName: "Riya",
-      doctor: "Daniel",
-      checkUp: "Ortho",
-      date: "12-10-2018",
-      time: "1:10PM",
-      status: "Pending",
-    },
-    {
-      patientName: "Siri",
-      doctor: "Daniel",
-      checkUp: "Ortho",
-      date: "12-10-2018",
-      time: "1:30PM",
-      status: "Cancelled",
-    },
-    {
-      patientName: "Rajesh",
-      doctor: "Mancy Kumar",
-      checkUp: "Dental",
-      date: "12-10-2018",
-      time: "12:10PM",
-      status: "Completed",
-    },
-    {
-      patientName: "Riya",
-      doctor: "Daniel",
-      checkUp: "Ortho",
-      date: "12-10-2018",
-      time: "1:10PM",
-      status: "Pending",
-    },
-    {
-      patientName: "Siri",
-      doctor: "Daniel",
-      checkUp: "Ortho",
-      date: "12-10-2018",
-      time: "1:30PM",
-      status: "Cancelled",
-    },
-  ];
-
   const getStatusClasses = (status: string) => {
     switch (status) {
       case "Completed":
@@ -317,6 +297,8 @@ export default function AdminDashboard() {
         return "bg-yellow-100 text-yellow-800";
       case "Cancelled":
         return "bg-red-100 text-red-800";
+      case "Scheduled": // Added Scheduled status
+        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -396,12 +378,39 @@ export default function AdminDashboard() {
     }
   };
 
+  // NEW: Function to fetch appointments data
+  const fetchAppointments = async () => {
+    setAppointmentsLoading(true);
+    setAppointmentsError(null);
+    try {
+      // Assuming a new API route for fetching all appointments (for admin)
+      // This API should also populate the 'patient' and 'doctor' fields
+      const res = await fetch("/api/appointments");
+      const data = await res.json();
+      if (res.ok) {
+        setAppointments(data.data);
+      } else {
+        setAppointmentsError(data.message || "Failed to fetch appointments");
+        toast.error(data.message || "Failed to fetch appointments");
+      }
+    } catch (err) {
+      console.error("Fetch appointments error:", err);
+      setAppointmentsError(
+        "Network error or server unreachable for appointments data"
+      );
+      toast.error("Network error or server unreachable for appointments data");
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
   // Fetch data on component mount and if session changes
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role === "admin") {
       fetchPatients();
       fetchDoctors();
       fetchAdmins(); // Fetch admins data as well
+      fetchAppointments(); // NEW: Fetch appointments data
     }
   }, [session, status]);
 
@@ -417,8 +426,6 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteClick = async (patientId: string) => {
-    // Replaced confirm() with a custom message/modal if needed, as per earlier instructions
-    // For now, using a simple check to proceed with delete
     if (
       window.confirm(
         "Are you sure you want to delete this patient? This action cannot be undone."
@@ -708,6 +715,61 @@ export default function AdminDashboard() {
     }
   };
 
+  // Handlers for Appointment Management actions
+  const handleEditAppointmentClick = (appointment: Appointment) => {
+    setCurrentAppointment(appointment);
+    setIsAppointmentEditModalOpen(true);
+  };
+
+  const handleDeleteAppointmentClick = async (appointmentId: string) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this appointment? This action cannot be undone."
+      )
+    ) {
+      try {
+        const res = await fetch(`/api/appointments/${appointmentId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || "Appointment deleted successfully!");
+          fetchAppointments(); // Refresh the list
+        } else {
+          toast.error(data.message || "Failed to delete appointment.");
+        }
+      } catch (error) {
+        console.error("Delete appointment error:", error);
+        toast.error("Network error or server unreachable.");
+      }
+    }
+  };
+
+  const handleAppointmentUpdate = async (updatedAppointment: Appointment) => {
+    try {
+      const res = await fetch(`/api/appointments/${updatedAppointment._id}`, {
+        method: "PUT", // Or PATCH depending on your API
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedAppointment),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Appointment updated successfully!");
+        setIsAppointmentEditModalOpen(false);
+        fetchAppointments(); // Refresh the list
+      } else {
+        toast.error(data.message || "Failed to update appointment.");
+      }
+    } catch (error) {
+      console.error("Update appointment error:", error);
+      toast.error("Network error or server unreachable.");
+    }
+  };
+
+  // Removed handleAddAppointment as admin will not add appointments directly
+
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -726,16 +788,22 @@ export default function AdminDashboard() {
     );
   }
 
+  // Calculate actual total patients and appointments for stats if needed
+  const totalPatients = patients.length;
+  const totalAppointments = appointments.length;
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       <Header />
 
       <div className="flex flex-1">
+        {/* Placeholder for Admin Sidebar if you have one, or remove this comment */}
+        {/* <AdminSidebar /> */}
         <main className="flex-1 p-6 md:p-8 space-y-6">
           <h1 className="text-3xl font-bold mb-6 text-gray-800">
             Admin Dashboard
           </h1>
-          {/* Quick Statistics Section */}
+          {/* Quick Statistics Section (Updated to use live data for patients and appointments) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-lg shadow-md p-6 flex items-center space-x-4">
               <div className="p-4 rounded-full bg-red-100 text-red-600">
@@ -757,11 +825,14 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm">Patients</p>
                 <h2 className="text-3xl font-bold text-gray-800">
-                  {stats.patients.count}
+                  {patientsLoading ? "..." : totalPatients}
                 </h2>
-                <p className="text-green-500 text-sm">
+                {/* <p className="text-green-500 text-sm">
                   +{stats.patients.increase}% Increased
-                </p>
+                </p> */}
+                {patientsError && (
+                  <p className="text-red-500 text-sm">Error loading</p>
+                )}
               </div>
             </div>
 
@@ -785,11 +856,14 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm">Appointments</p>
                 <h2 className="text-3xl font-bold text-gray-800">
-                  {stats.appointments.count}
+                  {appointmentsLoading ? "..." : totalAppointments}
                 </h2>
-                <p className="text-red-500 text-sm">
+                {/* <p className="text-red-500 text-sm">
                   -{stats.appointments.decrease}% Decreased
-                </p>
+                </p> */}
+                {appointmentsError && (
+                  <p className="text-red-500 text-sm">Error loading</p>
+                )}
               </div>
             </div>
 
@@ -813,15 +887,15 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm">Total Revenue</p>
                 <h2 className="text-3xl font-bold text-gray-800">
-                  ${stats.totalRevenue.amount}
+                  ${/* This data is still dummy */}7300
                 </h2>
-                <p className="text-green-500 text-sm">
+                {/* <p className="text-green-500 text-sm">
                   +{stats.totalRevenue.increase}% Increased
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
-          {/* Charts Section */}
+          {/* Charts Section (Kept as is with dummy data) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -840,85 +914,131 @@ export default function AdminDashboard() {
               <Bar data={patientsChartData} options={patientsChartOptions} />
             </div>
           </div>
-          {/* Appointments Table Section */}
+          {/* Appointments Table Section (Updated to use fetched data and include actions) */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Appointments
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Patient Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Doctor
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Check Up
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Date
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Time
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {appointmentsTableData.map((appointment, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {appointment.patientName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {appointment.doctor}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {appointment.checkUp}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {appointment.date}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {appointment.time}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClasses(
-                            appointment.status
-                          )}`}
-                        >
-                          {appointment.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Appointment Management
+              </h3>
+              {/* Removed the "Add Appointment" button as requested */}
             </div>
+
+            {appointmentsLoading ? (
+              <p>Loading appointments data...</p>
+            ) : appointmentsError ? (
+              <p className="text-red-500">{appointmentsError}</p>
+            ) : appointments.length === 0 ? (
+              <p>No appointments found in the system.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Patient Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Doctor Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Date
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Time
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Reason
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Status
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {appointments.map((appointment) => (
+                      <tr key={appointment._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {/* Assuming patient is populated, otherwise just show ID or N/A */}
+                          {typeof appointment.patient === "object"
+                            ? `${appointment.patient.name} ${appointment.patient.surname}`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {/* Assuming doctor is populated */}
+                          {typeof appointment.doctor === "object"
+                            ? `${appointment.doctor.name} ${appointment.doctor.surname}`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(appointment.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {appointment.time}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                          {appointment.reason}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClasses(
+                              appointment.status
+                            )}`}
+                          >
+                            {appointment.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <div className="flex justify-center items-center space-x-2">
+                            <button
+                              onClick={() =>
+                                handleEditAppointmentClick(appointment)
+                              }
+                              className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-100 transition duration-150"
+                              title="Edit Appointment"
+                            >
+                              <FaEdit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteAppointmentClick(appointment._id)
+                              }
+                              className="text-red-600 hover:text-red-900 p-2 rounded-full hover:bg-red-100 transition duration-150"
+                              title="Delete Appointment"
+                            >
+                              <FaTrash className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
           {/* Patient Management Table Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -1412,6 +1532,20 @@ export default function AdminDashboard() {
           onClose={() => setIsAdminPasswordModalOpen(false)}
           adminId={currentAdmin._id}
           onPasswordUpdate={handleAdminPasswordUpdate}
+        />
+      )}
+
+      {/* NEW: Appointment Modals (placeholders) */}
+      {/* Removed isAppointmentAddModalOpen && ( ... ) block */}
+      {isAppointmentEditModalOpen && currentAppointment && (
+        <AppointmentEditModal
+          isOpen={isAppointmentEditModalOpen}
+          onClose={() => setIsAppointmentEditModalOpen(false)}
+          appointment={currentAppointment}
+          onUpdate={handleAppointmentUpdate}
+          // You might pass patients and doctors lists to the edit modal for dropdowns
+          patients={patients}
+          doctors={doctors}
         />
       )}
     </div>
