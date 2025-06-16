@@ -11,38 +11,71 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Check for authenticated session and admin role
+  // Check for authenticated session and determine user role
   const session = await getServerSession(req, res, authOptions);
-
-  if (!session || session.user?.role !== "admin") {
-    // Assuming your session user object has a 'role' property
-    return res
-      .status(401)
-      .json({ success: false, error: "Unauthorized: Admin access required" });
-  }
+  const userRole = session?.user?.role;
 
   await dbConnect(); // Connect to your database
 
   switch (req.method) {
     case "GET":
       try {
+        // --- CORRECTED AUTHORIZATION LOGIC ---
+        // Allow GET requests if the user is an admin, doctor, or patient.
+        // Deny if no session, or if the role is NOT admin AND NOT doctor AND NOT patient.
+        if (
+          !session ||
+          !userRole ||
+          (userRole !== "admin" &&
+            userRole !== "patient")
+        ) {
+          console.warn(
+            "GET /api/doctors: Unauthorized attempt. User role:",
+            userRole
+          );
+          return res
+            .status(403)
+            .json({
+              success: false,
+              error: "Forbidden: You do not have permission to view doctors.",
+            });
+        }
+
         // Fetch all doctors from your database
-        const doctors = await Doctor.find({});
-        // Return doctors (Mongoose documents will have _id, not 'id' by default)
+        // Selectively omit sensitive fields like password before sending to frontend
+        const doctors = await Doctor.find({}).select("-password"); // Exclude password from the response
+
         res.status(200).json({ success: true, data: doctors });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching doctors:", error);
         res
           .status(500)
-          .json({ success: false, error: "Failed to fetch doctors" });
+          .json({
+            success: false,
+            error: error.message || "Failed to fetch doctors.",
+          });
       }
       break;
 
     case "POST":
       try {
+        // Only admins can add doctors (POST requests)
+        if (!session || userRole !== "admin") {
+          console.warn(
+            "POST /api/doctors: Unauthorized attempt. User role:",
+            userRole
+          );
+          return res
+            .status(403)
+            .json({
+              success: false,
+              error: "Forbidden: Only administrators can add new doctors.",
+            });
+        }
+
         const newDoctorData = req.body;
 
-        // Basic validation for required fields before proceeding
+        // Basic validation
         if (
           !newDoctorData.name ||
           !newDoctorData.surname ||
@@ -62,7 +95,7 @@ export default async function handler(
             .json({ success: false, error: "Missing required fields" });
         }
 
-        // Hash the password before creating the doctor
+        // Hash the password before saving
         const hashedPassword = await bcrypt.hash(newDoctorData.password, 10); // 10 salt rounds recommended
 
         // Overwrite the plain text password with the hashed one
@@ -75,9 +108,14 @@ export default async function handler(
         const doctor = await Doctor.create(newDoctorData);
 
         // Respond with the created doctor (excluding sensitive info like password)
-        // You might want to strip the password field before sending the response
         const { password, ...safeDoctorData } = doctor.toObject(); // Convert Mongoose doc to plain object
-        res.status(201).json({ success: true, data: safeDoctorData });
+        res
+          .status(201)
+          .json({
+            success: true,
+            data: safeDoctorData,
+            message: "Doctor added successfully!",
+          });
       } catch (error: any) {
         console.error("Error creating doctor:", error);
         // Handle Mongoose validation errors specifically if needed
@@ -92,7 +130,7 @@ export default async function handler(
         if (error.code === 11000) {
           // Duplicate key error (e.g., email already exists)
           return res
-            .status(400)
+            .status(409)
             .json({ success: false, error: "Email already registered." });
         }
         res
