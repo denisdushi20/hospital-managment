@@ -16,6 +16,7 @@ export default function Header() {
   const isAuthenticated = status === "authenticated";
   const userRole = session?.user?.role; // Get the user's role
 
+
   // Determine the dashboard link based on role
   let dashboardHref = "/dashboard";
   if (userRole === "admin") {
