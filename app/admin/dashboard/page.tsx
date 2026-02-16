@@ -39,7 +39,7 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 // Define the interface for Patient data (matching your database fields, excluding password)
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [appointmentsError, setAppointmentsError] = useState<string | null>(
-    null
+    null,
   );
 
   // State for Patient Modals
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         // Filter out the currently logged-in admin from the list to prevent self-deletion/editing issues
         const filteredAdmins = data.data.filter(
-          (admin: Admin) => admin.email !== session?.user?.email
+          (admin: Admin) => admin.email !== session?.user?.email,
         );
         setAdmins(filteredAdmins);
       } else {
@@ -368,10 +368,10 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Fetch admins error:", err);
       setAdminsError(
-        "Network error or server unreachable for administrators data"
+        "Network error or server unreachable for administrators data",
       );
       toast.error(
-        "Network error or server unreachable for administrators data"
+        "Network error or server unreachable for administrators data",
       );
     } finally {
       setAdminsLoading(false);
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Fetch appointments error:", err);
       setAppointmentsError(
-        "Network error or server unreachable for appointments data"
+        "Network error or server unreachable for appointments data",
       );
       toast.error("Network error or server unreachable for appointments data");
     } finally {
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
   const handleDeleteClick = async (patientId: string) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this patient? This action cannot be undone."
+        "Are you sure you want to delete this patient? This action cannot be undone.",
       )
     ) {
       try {
@@ -449,7 +449,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const handlePatientUpdate = async (updatedPatient: Patient) => {
+  const handlePatientUpdate = async (
+    updatedPatient: Omit<Patient, "createdAt" | "updatedAt">,
+  ) => {
     try {
       const res = await fetch(`/api/patients/${updatedPatient._id}`, {
         method: "PUT", // Or PATCH depending on your API
@@ -474,7 +476,7 @@ export default function AdminDashboard() {
 
   const handlePasswordUpdate = async (
     patientId: string,
-    newPassword: string
+    newPassword: string,
   ) => {
     try {
       const res = await fetch(`/api/patients/change-password/${patientId}`, {
@@ -511,7 +513,7 @@ export default function AdminDashboard() {
   const handleDeleteDoctorClick = async (doctorId: string) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this doctor? This action cannot be undone."
+        "Are you sure you want to delete this doctor? This action cannot be undone.",
       )
     ) {
       try {
@@ -557,7 +559,7 @@ export default function AdminDashboard() {
 
   const handleDoctorPasswordUpdate = async (
     doctorId: string,
-    newPassword: string
+    newPassword: string,
   ) => {
     try {
       const res = await fetch(`/api/doctors/change-password/${doctorId}`, {
@@ -623,7 +625,7 @@ export default function AdminDashboard() {
 
     if (
       window.confirm(
-        "Are you sure you want to delete this administrator? This action cannot be undone."
+        "Are you sure you want to delete this administrator? This action cannot be undone.",
       )
     ) {
       try {
@@ -669,7 +671,7 @@ export default function AdminDashboard() {
 
   const handleAdminPasswordUpdate = async (
     adminId: string,
-    newPassword: string
+    newPassword: string,
   ) => {
     try {
       const res = await fetch(`/api/admins/change-password/${adminId}`, {
@@ -724,7 +726,7 @@ export default function AdminDashboard() {
   const handleDeleteAppointmentClick = async (appointmentId: string) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this appointment? This action cannot be undone."
+        "Are you sure you want to delete this appointment? This action cannot be undone.",
       )
     ) {
       try {
@@ -1005,7 +1007,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <span
                             className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClasses(
-                              appointment.status
+                              appointment.status,
                             )}`}
                           >
                             {appointment.status}
@@ -1473,7 +1475,9 @@ export default function AdminDashboard() {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           patient={currentPatient}
-          onUpdate={handlePatientUpdate}
+          onUpdate={(updatedPatient) => {
+            handlePatientUpdate(updatedPatient);
+          }}
         />
       )}
       {isPasswordModalOpen && currentPatient && (
@@ -1491,7 +1495,7 @@ export default function AdminDashboard() {
           isOpen={isDoctorEditModalOpen}
           onClose={() => setIsDoctorEditModalOpen(false)}
           doctor={currentDoctor}
-          onUpdate={handleDoctorUpdate}
+          onUpdate={handleDoctorUpdate as (updatedDoctor: any) => Promise<void>}
         />
       )}
       {isDoctorPasswordModalOpen && currentDoctor && (
@@ -1506,16 +1510,15 @@ export default function AdminDashboard() {
         <DoctorAddModal
           isOpen={isDoctorAddModalOpen}
           onClose={() => setIsDoctorAddModalOpen(false)}
-          onAdd={handleAddDoctor}
+          onAdd={(newDoctor) => handleAddDoctor(newDoctor as any)}
         />
       )}
 
-      {/* NEW: Admin Modals */}
       {isAdminAddModalOpen && (
         <AdminAddModal
           isOpen={isAdminAddModalOpen}
           onClose={() => setIsAdminAddModalOpen(false)}
-          onAdd={handleAddAdmin}
+          onAdd={(newAdmin) => handleAddAdmin(newAdmin as any)}
         />
       )}
       {isAdminEditModalOpen && currentAdmin && (
@@ -1523,7 +1526,7 @@ export default function AdminDashboard() {
           isOpen={isAdminEditModalOpen}
           onClose={() => setIsAdminEditModalOpen(false)}
           admin={currentAdmin}
-          onUpdate={handleAdminUpdate}
+          onUpdate={(updatedAdmin) => handleAdminUpdate(updatedAdmin as any)}
         />
       )}
       {isAdminPasswordModalOpen && currentAdmin && (
@@ -1535,15 +1538,12 @@ export default function AdminDashboard() {
         />
       )}
 
-      {/* NEW: Appointment Modals (placeholders) */}
-      {/* Removed isAppointmentAddModalOpen && ( ... ) block */}
       {isAppointmentEditModalOpen && currentAppointment && (
         <AppointmentEditModal
           isOpen={isAppointmentEditModalOpen}
           onClose={() => setIsAppointmentEditModalOpen(false)}
           appointment={currentAppointment}
           onUpdate={handleAppointmentUpdate}
-          // You might pass patients and doctors lists to the edit modal for dropdowns
           patients={patients}
           doctors={doctors}
         />

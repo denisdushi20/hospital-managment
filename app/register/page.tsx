@@ -10,7 +10,6 @@ import Footer from "@/components/Footer";
 export default function RegisterPage() {
   const router = useRouter(); 
 
-  // State to manage all form inputs, including new fields
   const [form, setForm] = useState({
     name: "",
     surname: "",
@@ -22,8 +21,8 @@ export default function RegisterPage() {
     state: "",
     zipCode: "",
     country: "",
-    dateOfBirth: "", // Stored as a string from input type="date"
-    gender: "", // Empty string for initial selection
+    dateOfBirth: "",
+    gender: "",
   });
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
@@ -40,7 +39,6 @@ export default function RegisterPage() {
     setMessage("");
     setIsSuccess(false);
 
-    // Basic client-side validation for essential fields
     if (!form.name || !form.surname || !form.email || !form.password) {
       setMessage(
         "Please fill out all essential fields (Name, Surname, Email, Password)."
@@ -48,14 +46,12 @@ export default function RegisterPage() {
       return;
     }
 
-    // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) {
       setMessage("Please enter a valid email address.");
       return;
     }
 
-    // Basic phone number format validation (10 digits)
     if (form.phone && !/^\d{10}$/.test(form.phone)) {
       setMessage("Please enter a valid 10-digit phone number (optional).");
       return;
@@ -64,13 +60,12 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      // Construct the data payload, including the nested address object
       const payload = {
         name: form.name,
         surname: form.surname,
         email: form.email,
         password: form.password,
-        phone: form.phone || undefined, // Send undefined if empty string
+        phone: form.phone || undefined,
         address: {
           street: form.street || undefined,
           city: form.city || undefined,
@@ -82,15 +77,14 @@ export default function RegisterPage() {
         gender: form.gender || undefined,
       };
 
-      // Filter out empty address fields to avoid sending { street: undefined, ... }
-      if (Object.values(payload.address).every((val) => val === undefined)) {
-        delete payload.address; // Don't send address if all sub-fields are empty
-      }
+     if (Object.values(payload.address).every((val) => val === undefined)) {
+       delete (payload as any).address;
+     }
 
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload), // Send the constructed payload
+        body: JSON.stringify(payload),
       });
 
       const responseBody = await res.text();

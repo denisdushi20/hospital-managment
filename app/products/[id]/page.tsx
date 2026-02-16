@@ -1,7 +1,6 @@
 import { Product } from "@/types/product.d";
 import { getProductById } from "@/lib/services/productService";
 
-// 1. Update the interface: params must be a Promise
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -16,9 +15,8 @@ export async function generateStaticParams() {
   }));
 }
 
-// 2. Await the params inside the component
 export default async function ProductPage({ params }: Props) {
-  const { id } = await params; // Extract id after awaiting
+  const { id } = await params;
   const product = await getProductById(id);
 
   if (!product) {
